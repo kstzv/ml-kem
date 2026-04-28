@@ -1,6 +1,6 @@
 # ML-KEM (FIPS 203) — Pure C Implementation
 
-A zero-dependency, low-level implementation of the ML-KEM (Kyber) post-quantum key encapsulation mechanism, written in pure C.
+A low-level implementation of the ML-KEM (Kyber) post-quantum key encapsulation mechanism, written in pure C.
 
 This project focuses on correctness, transparency, and architectural clarity rather than premature optimization or production readiness.
 
