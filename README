@@ -23,10 +23,11 @@ Beta (v0.0.1)
 - ✔ NIST KAT tests (key generation & encapsulation) are passing
 - ✔ End-to-end decapsulation validated against valid encapsulation outputs
 - ✔ Linux kernel module builds and loads/unloads correctly
+- ✔ Stress testing of decapsulation pool (see `test_pool/`)
 
 **Not yet:**
 - ❌ Full constant-time validation (planned via dudect)
-- ❌ Extensive fuzzing / stress testing
+- ❌ Extensive fuzzing
 - ❌ Kernel-space validation against KAT
 - ❌ Formal security audit
 
@@ -143,6 +144,11 @@ Currently implemented:
 
 - ✔ NIST KAT (KeyGen, Encapsulation)
 - ✔ Functional decapsulation validation
+- ✔ High-contention stress test of:
+      - Decapsulation pool (256 threads / 16 slots) ; 
+      - ThreadSanitizer (TSan) clean ; 
+      - AddressSanitizer (ASan) / UBSan clean 
+      - (See `test_pool/` for reproducible stress testing setup and sanitizer runs)
 
 Planned:
 
