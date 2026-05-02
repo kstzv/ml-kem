@@ -15,7 +15,7 @@ The implementation follows standard C semantics to simplify porting across diffe
 ---
 
 ## ⚠️ Status
-Beta (v0.0.1)
+Beta (v0.2.0)
 
 **This is an early (beta) version.**
 
