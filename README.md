@@ -15,7 +15,7 @@ The implementation follows standard C semantics to simplify porting across diffe
 ---
 
 ## ⚠️ Status
-Beta (v0.2.1)
+Beta (v0.3.0)
 
 **This is an early (beta) version.**
 
@@ -149,10 +149,11 @@ Currently implemented:
   - ThreadSanitizer (TSan) clean  
   - AddressSanitizer (ASan) / UBSan clean 
   - (See `test_pool/` for reproducible stress testing setup and sanitizer runs)
+- ✔ Preliminary constant-time testing using dudect has been added for the primary secret-dependent execution paths of the ML-KEM implementation.
 
 Planned:
 
-- dudect-based constant-time testing
+- Additional isolated coverage for lower-level arithmetic and SHA3/SHAKE internals is planned for future releases.
 - Kernel-space KAT validation
 - Stress testing of pool subsystem
 - Randomness quality checks
