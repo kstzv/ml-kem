@@ -13,6 +13,16 @@ The current dudect coverage includes testing of the primary secret-dependent exe
 
 The current testing focuses on detecting timing leaks in the primary secret-processing paths used by ML-KEM operations.
 
+## About the `userspace/` Directory
+
+The `userspace/` directory contains a dedicated copy of the ML-KEM userspace implementation used specifically for isolated dudect testing.
+
+This approach was chosen because many internal secret-dependent functions are intentionally declared as `static` in the main implementation.
+
+For dudect testing, some of these functions must be exposed in isolation in order to measure specific execution paths directly.
+
+Instead of modifying the primary implementation architecture or weakening encapsulation in the production code, a separate test-oriented copy of the userspace implementation is used for the dudect test environment.
+
 ## Planned Future Coverage
 
 The following components are planned for additional isolated dudect testing:
