@@ -12,6 +12,9 @@ u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result);
 void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
 int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 
+// Forward declarations of local function in this module
+static void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+
 // Full initialization routine:
 //  - Generates ML-KEM keypair
 //  - Allocates and initializes decapsulation pool
@@ -243,6 +246,22 @@ int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size
 	// This reconstructs expected ciphertext and shared secret
 	ml_kem_encapsulation(pool->ml_kem_pool[curr_slot].encaps_ctx, pool->ml_kem_pool[curr_slot].decrypt_ctx->m, pool->ml_kem_pool[curr_slot].decrypt_ctx->ctx->h_pk);
 	
+	// Steps from 3 to 6 doing in this local functions. This functions must be CT
+	ml_kem_decaps_ct_select_ss(pool, ciphertext, len_ciphertext, result, curr_slot);
+	
+	// Step 7: Wipe sensitive data in slot contexts
+	ml_kem_wipe_encaps(pool->ml_kem_pool[curr_slot].encaps_ctx);
+	ml_kem_wipe_decrypt(pool->ml_kem_pool[curr_slot].decrypt_ctx);
+	
+	// Release slot (atomic)
+	atomic_store_explicit(&pool->ml_kem_pool[curr_slot].is_free, 1, memory_order_release);
+	
+	return 0;
+}
+
+// Function to check the coincidence of ciphertexts after decrypt and re-encaps	
+static void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot)
+{
 	// Step 3: Precompute fallback shared secret (z || c) → SHAKE256
 	// Used if ciphertext verification fails (CCA security requirement)
 	u8 hash_z[ML_KEM_SEED_BYTES];
@@ -270,24 +289,10 @@ int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size
 		result[i] = (pool->ml_kem_pool[curr_slot].encaps_ctx->K_bar[i] & inv) | (hash_z[i] & mask);
 	}
 	
-	// Step 6: Wipe sensitive data in slot contexts
-	ml_kem_wipe_encaps(pool->ml_kem_pool[curr_slot].encaps_ctx);
-	ml_kem_wipe_decrypt(pool->ml_kem_pool[curr_slot].decrypt_ctx);
-	
-	// Step 7: Wipe local buffers
+	// Step 6: Wipe local buffers
 	ml_kem_memzero(hash_z, ML_KEM_SEED_BYTES);
 	ml_kem_memzero(pool->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
-	
-	// Release slot (atomic)
-	atomic_store_explicit(&pool->ml_kem_pool[curr_slot].is_free, 1, memory_order_release);
-	
-	return 0;
 }
-	
-	
-
-	
-	
 	
 	
 	
