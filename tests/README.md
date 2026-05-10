@@ -1,7 +1,6 @@
-ML-KEM Test Suite
+#ML-KEM Test Suite
 
-This directory contains the complete validation and robustness test infrastructure for the pure C implementation of ML-KEM (FIPS 203)
-.
+This directory contains the complete validation and robustness test infrastructure for the pure C implementation of ML-KEM (FIPS 203).
 
 The goal of this test suite is not only correctness verification, but also practical validation of:
 
@@ -14,7 +13,7 @@ API robustness,
 deterministic fallback behavior of ML-KEM decapsulation,
 compiler-dependent behavior under optimization.
 
-The implementation is primarily validated on:
+#The implementation is primarily validated on:
 
 x86-64
 GCC
@@ -26,7 +25,7 @@ CC ?= gcc
 
 Most tests are intentionally separated into independent categories to simplify debugging, maintenance, and security analysis.
 
-Test Categories
+#Test Categories
 1. KAT End-to-End Decapsulation Tests
 
 Directory:
