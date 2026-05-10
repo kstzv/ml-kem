@@ -1,4 +1,4 @@
-#ML-KEM Test Suite
+# ML-KEM Test Suite
 
 This directory contains the complete validation and robustness test infrastructure for the pure C implementation of ML-KEM (FIPS 203).
 
@@ -13,7 +13,7 @@ API robustness,
 deterministic fallback behavior of ML-KEM decapsulation,
 compiler-dependent behavior under optimization.
 
-#The implementation is primarily validated on:
+# The implementation is primarily validated on:
 
 x86-64
 GCC
@@ -25,8 +25,8 @@ CC ?= gcc
 
 Most tests are intentionally separated into independent categories to simplify debugging, maintenance, and security analysis.
 
-#Test Categories
-1. KAT End-to-End Decapsulation Tests
+# Test Categories
+## 1. KAT End-to-End Decapsulation Tests
 
 Directory:
 
@@ -50,7 +50,7 @@ The test uses:
 
 Validation compares the shared secret derived during decapsulation with the original shared secret produced during encapsulation.
 
-2. KAT Key Generation Tests
+## 2. KAT Key Generation Tests
 
 Directory:
 
@@ -68,7 +68,7 @@ deterministic seed handling.
 
 Generated public keys are compared against official NIST reference vectors.
 
-3. KAT Encapsulation Tests
+## 3. KAT Encapsulation Tests
 
 Directory:
 
@@ -86,9 +86,9 @@ deterministic randomness processing.
 
 Generated ciphertexts are compared against official NIST reference vectors.
 
-4. dudect Constant-Time Tests
+## 4. dudect Constant-Time Tests
 
-Directory:
+### Directory:
 
 test_dudect_ml_kem/
 
@@ -115,7 +115,7 @@ CFLAGS = -O3 -std=c11 -Wall -Wextra
 
 The dudect tests are intentionally separated from the main repository build flow.
 
-Important
+### Important
 
 This directory must be copied into an official dudect source tree before compilation.
 
@@ -129,7 +129,7 @@ General workflow:
 dudect project:
 https://github.com/oreparaz/dudect?utm_source=chatgpt.com
 
-Why -O3 Is Used for dudect
+### Why -O3 Is Used for dudect
 
 The purpose of dudect is to test the timing behavior of the final optimized machine code.
 
@@ -140,7 +140,7 @@ while debugging and sanitizer-oriented tests usually use -O0 -g.
 
 This separation is intentional.
 
-5. API Input Validation Tests
+## 5. API Input Validation Tests
 
 Directory:
 test_input_validation/
@@ -164,7 +164,7 @@ absence of crashes,
 absence of undefined behavior,
 stable API handling.
 
-6. Invalid Ciphertext / z-Path Tests
+## 6. Invalid Ciphertext / z-Path Tests
 
 Directory:
 
@@ -185,7 +185,7 @@ Special attention is given to deterministic behavior:
 
 identical malformed ciphertexts must produce identical fallback shared secrets.
 
-7. Memory Leak Tests
+## 7. Memory Leak Tests
 
 Directory:
 
@@ -218,7 +218,7 @@ repeated object creation/destruction,
 repeated encapsulation/decapsulation,
 stress allocation cycles.
 
-8. Decapsulation Pool Stress Tests
+## 8. Decapsulation Pool Stress Tests
 
 Directory:
 
@@ -247,7 +247,7 @@ Typical tooling:
 ThreadSanitizer (TSAN),
 AddressSanitizer (ASAN).
 
-9. Massive Randomized Stress Tests
+## 9. Massive Randomized Stress Tests
 
 Directory:
 
@@ -270,7 +270,7 @@ validate long-term stability,
 validate deterministic correctness,
 detect hidden state corruption.
 
-Compiler Support
+# Compiler Support
 
 The test suite is primarily validated using:
 
@@ -286,7 +286,7 @@ Example:
 make CC=clang
 
 
-Optimization Strategy
+# Optimization Strategy
 
 Different test categories intentionally use different optimization levels.
 
@@ -304,7 +304,8 @@ Reason:
 easier debugging,
 cleaner sanitizer diagnostics,
 improved stack traces.
-Security Notes
+
+# Security Notes
 
 Passing these tests does not mathematically prove security.
 
@@ -324,10 +325,14 @@ Clang.
 
 Other architectures and compiler configurations may require additional validation.
 
-External References
+# External References
 https://csrc.nist.gov/pubs/fips/203/final?utm_source=chatgpt.com
+
 https://github.com/C2SP/CCTV/tree/main/ML-KEM
+
 https://github.com/oreparaz/dudect?utm_source=chatgpt.com
+
 https://llvm.org/?utm_source=chatgpt.com
+
 https://gcc.gnu.org/?utm_source=chatgpt.com
 
