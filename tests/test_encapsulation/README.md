@@ -27,7 +27,9 @@ In other words, the implementation output is checked against known deterministic
 The test uses vector data stored in:
 
 ML-KEM-encapDecap-FIPS203/internalProjection.json
+
 this file got from(27.02.2026):
+
 https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ML-KEM-encapDecap-FIPS203
 
 For every vector entry, the test:
@@ -63,11 +65,16 @@ Such a result means that the encapsulation implementation produced data that doe
 ## Notes
 
 This test validates functional correctness of encapsulation only. It does not validate:
-constant-time behavior;
-cache-timing resistance;
-invalid-input handling;
-concurrent execution safety;
-memory-safety guarantees.
+
+  1.constant-time behavior;
+  
+  2.cache-timing resistance;
+  
+  3.invalid-input handling;
+
+  4.concurrent execution safety;
+  
+  5.memory-safety guarantees.
 
 These properties are tested separately in other parts of the ML-KEM test suite.
 
