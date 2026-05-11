@@ -30,7 +30,7 @@ ML-KEM-encapDecap-FIPS203/internalProjection.json
 this file got from(27.02.2026):
 https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ML-KEM-encapDecap-FIPS203
 
-## For every vector entry, the test:
+For every vector entry, the test:
   1. loads the public key;
   2. performs encapsulation;
   3. compares the produced ciphertext with the expected ciphertext;
@@ -39,15 +39,19 @@ https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ML-KEM-e
 Both comparisons are performed byte-for-byte.
 
 Build
+
   make
 
 The default compiler is gcc, but another compiler may be selected:
+
   make CC=clang
 
 Run
+
   ./test
 
 Clean
+
   make clean
 
 ## Expected result
