@@ -73,8 +73,8 @@ This test is focused on functional correctness of decapsulation.
 
 It does not replace:
 
-NIST KAT validation;
-constant-time testing;
-memory-safety testing;
-invalid-input testing;
-multithreaded pool stress testing.
+    NIST KAT validation;
+    constant-time testing;
+    memory-safety testing;
+    invalid-input testing;
+    multithreaded pool stress testing.
