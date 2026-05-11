@@ -23,10 +23,9 @@ This test verifies that the implementation is able to complete the full encapsul
 
 In other words, for each tested case:
 
-```text
 K_encaps == K_decaps
 
-If the values differ, the implementation reports an error for the corresponding vector and parameter set.
+If the values differ, the implementation reports an error for the corresponding vector and parameter set
 
 # Test logic
 
