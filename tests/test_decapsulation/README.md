@@ -75,7 +75,11 @@ It does not replace:
 
 
  1.NIST KAT validation;
+ 
  2.constant-time testing;
+ 
  3.memory-safety testing;
+ 
  4.invalid-input testing;
+ 
  5.multithreaded pool stress testing.
