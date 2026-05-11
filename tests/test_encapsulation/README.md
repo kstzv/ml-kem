@@ -40,19 +40,19 @@ Both comparisons are performed byte-for-byte.
 
 Build
 
-  make
+    make
 
 The default compiler is gcc, but another compiler may be selected:
 
-  make CC=clang
+    make CC=clang
 
 Run
 
-  ./test
+    ./test
 
 Clean
 
-  make clean
+    make clean
 
 ## Expected result
 
