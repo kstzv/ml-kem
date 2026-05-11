@@ -42,16 +42,20 @@ The comparison uses memcmp() because this is a correctness test, not a constant-
 Constant-time behavior is tested separately in the dedicated dudect tests.
 
 Build
-  make
+
+    make
 
 The default compiler is gcc, but another compiler can be selected through CC:
-  make CC=clang
+
+    make CC=clang
 
 Run
-  ./test
+
+    ./test
 
 Clean
-  make clean
+
+    make clean
 
 ## Expected result
 
