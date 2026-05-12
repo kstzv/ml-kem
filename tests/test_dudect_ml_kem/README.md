@@ -65,3 +65,25 @@ Examples of tested modules from the implementation:
  - NTT implementation
   
  - modular arithmetic and Barrett reduction
+
+# General Test Structure
+
+Most dudect tests inside this directory follow the same overall structure:
+
+- Inclusion of required headers and implementation files
+  
+- Local pseudo-random generator functions
+  
+- Optional initialization / cleanup routines
+  
+- Allocation of test buffers and contexts
+  
+- Selection or wrapping of the tested function
+  
+- dudect prepare_inputs() implementation
+  
+- dudect do_one_computation() implementation
+  
+- Main test loop using dudect
+
+This consistent structure helps isolate leakage sources and simplifies auditing and extension of the test suite.
