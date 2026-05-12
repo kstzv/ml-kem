@@ -87,3 +87,13 @@ Most dudect tests inside this directory follow the same overall structure:
 - Main test loop using dudect
 
 This consistent structure helps isolate leakage sources and simplifies auditing and extension of the test suite.
+
+# Important Notes About dudect
+
+dudect is a statistical leakage detection framework. A successful dudect run:
+
+- does NOT mathematically prove absolute constant-time behavior
+- does NOT guarantee resistance on all architectures or compilers
+- DOES provide practical statistical evidence against observable timing leakage under the tested conditions
+
+These tests are therefore intended as practical engineering validation rather than formal proof.
