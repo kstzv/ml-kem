@@ -132,8 +132,9 @@ Special attention is given to the decapsulation path and fallback logic used dur
 
 Typical dudect output may look similar to:
 
-meas:    1.00 M, max t: +1.32, max tau: 3.10e-03
-For the moment, maybe constant time.
+  meas:    1.00 M, max t: +1.32, max tau: 3.10e-03
+   
+  For the moment, maybe constant time.
 
 Lower absolute t-values generally indicate lower observable leakage under the tested conditions.
 
