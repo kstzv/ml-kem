@@ -15,24 +15,43 @@ The implementation follows standard C semantics to simplify porting across diffe
 ---
 
 ## ⚠️ Status
-Beta (v0.3.0)
+Stable userspace release (v1.0.0)
 
-**This is an early (beta) version.**
+### Userspace implementation
+The userspace implementation is considered stable for tested x86-64 environments using GCC and Clang toolchains.
 
-- ✔ Userspace implementation is functional
-- ✔ NIST KAT tests (key generation & encapsulation) are passing
-- ✔ End-to-end decapsulation validated against valid encapsulation outputs
-- ✔ Linux kernel module builds and loads/unloads correctly
-- ✔ Stress testing of decapsulation pool (see `test_pool/`)
+Validated using:
+- ✔ NIST KAT tests (key generation & encapsulation)
+- ✔ End-to-end decapsulation validation
+- ✔ dudect constant-time leakage testing
+- ✔ Stress testing of decapsulation pool
+- ✔ Invalid ciphertext handling tests
+- ✔ Input validation and error-handling tests
+- ✔ ASAN / TSAN / Valgrind testing
+- ✔ Multi-million iteration stress tests
+- ✔ GCC and Clang testing
 
-**Not yet:**
-- ❌ Full constant-time validation (planned via dudect)
-- ❌ Extensive fuzzing
-- ❌ Kernel-space validation against KAT
-- ❌ Formal security audit
+### Linux kernel implementation
+The Linux kernel module is currently experimental.
 
-> This implementation is **NOT production-ready**.
+Current status:
+- ✔ Builds successfully
+- ✔ Loads/unloads correctly
+- ✔ Shares the same core architecture as the userspace implementation
+- ✔ Designed for portability and future kernel-space validation
 
+Planned:
+- ❌ Kernel-space KAT validation
+- ❌ AF_ALG-based testing
+- ❌ Extended kernel-space stress testing
+- ❌ Kernel-space constant-time validation
+
+### Notes
+This project is intended as a practical low-level ML-KEM implementation focused on tested x86-64 environments.
+
+Additional testing on other architectures and compilers is encouraged.
+
+No formal third-party security audit has been performed.
 ---
 
 ## 🎯 Goals
@@ -67,10 +86,14 @@ Beta (v0.3.0)
 
 ## 🚀 Future Work
 
-- Constant-time verification (dudect)
-- AF_ALG integration for kernel testing
-- Additional optimization passes
-- Extended test coverage
+- Extended multi-architecture validation
+- Additional compiler and optimization-level testing
+- AF_ALG integration for Linux kernel testing
+- Kernel-space KAT validation
+- Extended kernel-space stress testing
+- Additional performance optimization passes
+- Fuzzing and long-term robustness testing
+- External security review and independent validation
 - Documentation improvements
 
 ### 🔧 Hardware Acceleration (Exploration)
@@ -125,39 +148,75 @@ Key design ideas:
 
 ## 🔐 Security Considerations
 
-- No secret-dependent branching in core cryptographic paths (where applicable)
+- No secret-dependent branching in critical cryptographic paths (where applicable)
+- Constant-time oriented implementation design
 - Explicit memory zeroization (`ml_kem_memzero`)
 - Separation of public and secret data flows
-- Designed with constant-time execution principles in mind
+- Constant-time selection logic for decapsulation fallback handling
+- Designed to minimize secret-dependent behavior across cryptographic operations
+
+Validation performed on tested x86-64 environments includes:
+
+- ✔ dudect constant-time leakage testing
+- ✔ GCC and Clang testing
+- ✔ ASAN / TSAN / Valgrind validation
+- ✔ Stress testing and malformed ciphertext testing
+- ✔ Input validation and error-handling tests
 
 ⚠️ However:
 
-- Constant-time guarantees are **not yet formally verified**
-- Compiler optimizations may affect behavior
-- Further validation is planned
-
+- Constant-time behavior is not formally proven
+- Compiler optimizations may still affect generated machine code
+- Additional validation on other architectures and toolchains is encouraged
+- No formal third-party security audit has been performed
 ---
 
 ## 🧪 Testing
 
-Currently implemented:
+The implementation includes dedicated test suites covering correctness, robustness, concurrency, memory safety, and constant-time behavior.
 
-- ✔ NIST KAT (KeyGen, Encapsulation)
-- ✔ Functional decapsulation validation
-- ✔ High-contention stress test of:
-  - Decapsulation pool (256 threads / 16 slots)  
-  - ThreadSanitizer (TSan) clean  
-  - AddressSanitizer (ASan) / UBSan clean 
-  - (See `test_pool/` for reproducible stress testing setup and sanitizer runs)
-- ✔ Preliminary constant-time testing using dudect has been added for the primary secret-dependent execution paths of the ML-KEM implementation.
+Implemented test categories include:
 
-Planned:
+### ✔ NIST KAT Validation
+- Key generation KAT tests
+- Encapsulation KAT tests
+- End-to-end decapsulation validation
 
-- Additional isolated coverage for lower-level arithmetic and SHA3/SHAKE internals is planned for future releases.
-- Kernel-space KAT validation
-- Stress testing of pool subsystem
-- Randomness quality checks
+### ✔ Constant-Time Validation
+- dudect testing for primary secret-dependent execution paths
+- Validation of decapsulation logic
+- Validation of polynomial arithmetic and modular operations
+- Validation of SHA3 / SHAKE wrapper usage
+- GCC and Clang testing
 
+### ✔ Stress Testing
+- Multi-million iteration stress tests
+- High-contention decapsulation pool testing
+- Multi-thread validation using atomic slot management
+
+### ✔ Memory Safety Validation
+- AddressSanitizer (ASAN)
+- ThreadSanitizer (TSAN)
+- Valgrind memory analysis
+- UndefinedBehaviorSanitizer (UBSAN)
+
+### ✔ Robustness Testing
+- Invalid ciphertext handling tests
+- Decapsulation fallback (`z`) logic validation
+- Input validation and error-handling tests
+
+### ✔ Kernel Validation
+- Linux kernel module builds successfully
+- Kernel module load/unload validation
+
+Detailed reproducible test setups and instructions are available in the `tests/` directory and its subdirectories.
+
+### Planned
+- AF_ALG-based kernel-space validation
+- Extended kernel-space stress testing
+- Additional multi-architecture testing
+- Additional fuzzing and robustness testing
+- Randomness quality analysis
 ---
 
 ## 🐧 Kernel Support
