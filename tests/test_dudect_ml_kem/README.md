@@ -5,17 +5,17 @@ This directory contains a collection of constant-time leakage tests for the ML-K
 
 Each subdirectory targets a separate module, primitive, or critical operation of the implementation in order to validate resistance against timing-based side-channel leakage.
 
-The tests focus primarily on:
+## The tests focus primarily on:
 
-    -secret-dependent branching
+-secret-dependent branching
+  
+-secret-dependent memory access
 
-    -secret-dependent memory access
+-compiler-induced timing variations
 
-    -compiler-induced timing variations
+-constant-time arithmetic correctness
 
-    -constant-time arithmetic correctness
-
-    -correctness of constant-time masking/select operations
+-correctness of constant-time masking/select operations
 
 
 The overall goal of these tests is to increase confidence that the implementation behaves in a timing-independent manner on tested platforms and compiler configurations.
