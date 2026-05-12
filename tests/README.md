@@ -26,6 +26,19 @@ CC ?= gcc
 Most tests are intentionally separated into independent categories to simplify debugging, maintenance, and security analysis.
 
 # Test Categories
+
+## Test Structure
+
+| Directory | Purpose |
+|---|---|
+| test_generation_keys | NIST KAT tests for key generation |
+| test_encapsulation | Encapsulation validation |
+| test_decapsulation | End-to-end decapsulation tests |
+| test_dudect_ml_kem | Constant-time leakage testing using dudect |
+| test_memory_leak | ASAN / Valgrind leak testing |
+| test_pool | Stress testing of decapsulation pool |
+| test_input_validation | Negative and validation tests |
+
 ## 1. KAT End-to-End Decapsulation Tests
 
 Directory:
