@@ -75,51 +75,6 @@ Key principles:
 
 ---
 
-## Tests
-
-NIST-based compliance tests are provided as separate standalone test directories:
-
-- `test_generation_keys`
-- `test_encapsulation`
-- `test_decapsulation`
-
-Each test directory contains:
-
-- a dedicated test file
-- a local copy of the ML-KEM implementation
-- its own Makefile
-
-### Design Note
-
-The test environments are intentionally isolated.
-
-This is required because NIST vector validation relies on deterministic input,
-which differs from the default implementation that uses system randomness
-(e.g. `getrandom()`).
-
-For this reason, test-specific modifications are applied to the codebase
-to control randomness and reproduce NIST test vectors exactly.
-
-These changes are **local to each test directory** and do not affect the main implementation. These local changes are described in detail in the documentation.
-
-### Running Tests
-
-Each test can be built and executed independently:
-
-```bash
-cd test_generation_keys
-make
-./test
-
-cd ../test_encapsulation
-make
-./test
-
-cd ../test_decapsulation
-make
-./test
-
----
 
 ## Public API
 
