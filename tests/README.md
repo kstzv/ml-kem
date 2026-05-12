@@ -38,6 +38,8 @@ Most tests are intentionally separated into independent categories to simplify d
 | test_memory_leak | ASAN / Valgrind leak testing |
 | test_pool | Stress testing of decapsulation pool |
 | test_input_validation | Negative and validation tests |
+| test_stress_ml_kem | Large-scale stress and reliability testing |
+| test_invalid_ciphertexts | Invalid ciphertext and fallback-path validation |
 
 ## 1. KAT End-to-End Decapsulation Tests
 
