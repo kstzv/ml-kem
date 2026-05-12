@@ -177,8 +177,7 @@ The project includes a Linux kernel-compatible build:
 
 ### Userspace
 
-```bash
-gcc -std=c11 -O2 -Wall -Wextra *.c -o ml_kem
+    gcc -std=c11 -O2 -Wall -Wextra *.c -o ml_kem
 
 ---
 
