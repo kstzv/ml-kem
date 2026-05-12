@@ -136,3 +136,52 @@ Typical dudect output may look similar to:
 
 Lower absolute t-values generally indicate lower observable leakage under the tested conditions.
 
+# Limitations
+
+These tests were primarily executed on:
+
+x86-64 systems
+Linux userspace environments
+
+Results may differ on:
+
+- different architectures
+- different microarchitectures
+- embedded systems
+- different compilers
+- different optimization settings
+
+Additional independent verification on other platforms is encouraged.
+
+# Integration Notes
+
+Most tests are intentionally isolated and may:
+
+- duplicate portions of implementation code
+- remove static qualifiers
+- wrap internal functions
+- expose internal routines for testing purposes
+
+This is done intentionally to allow direct timing analysis of otherwise inaccessible internal operations.
+
+# Security Goal
+
+The goal of this test suite is to reduce the risk of:
+
+- secret-dependent timing leakage
+- compiler-induced timing regressions
+- accidental non-constant-time behavior
+- unsafe secret handling paths
+
+while preserving:
+
+- low-level implementation clarity
+- explicit memory control
+- portability
+- compatibility with constrained environments
+
+# Related Implementation
+
+Main repository: 
+
+https://github.com/kstzv/ml-kem
