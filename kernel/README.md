@@ -25,7 +25,6 @@ Main design goals:
 
 The current module registers a KPP algorithm named:
 
-```text
 ml-kem
 
 ## License
