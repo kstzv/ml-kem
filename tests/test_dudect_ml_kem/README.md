@@ -97,3 +97,34 @@ dudect is a statistical leakage detection framework. A successful dudect run:
 - DOES provide practical statistical evidence against observable timing leakage under the tested conditions
 
 These tests are therefore intended as practical engineering validation rather than formal proof.
+
+# Compiler Testing
+
+The tests are intended to be executed under multiple compiler toolchains and optimization levels. Particular attention is given to:
+
+- GCC
+- Clang/LLVM
+
+Typical optimization targets include:
+
+ -O2
+ -O3
+
+This is important because compiler optimizations may alter the timing behavior of low-level constant-time code.
+
+# What Is Considered Sensitive
+
+The primary focus is on functions processing:
+
+- secret keys
+- temporary secrets
+- decapsulation secrets
+- shared secrets
+- intermediate polynomial data
+- rejection-sampling logic
+- constant-time ciphertext validation
+- constant-time fallback secret selection
+
+Special attention is given to the decapsulation path and fallback logic used during invalid ciphertext handling.
+
+
