@@ -80,16 +80,15 @@ Key principles:
 
 Main entry points:
 
-```c
-struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count);
+    struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count);
 
-void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
+    void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
 
-u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result);
+    u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result);
 
-void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
+    void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
 
-int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
+    int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 
 ## License
 
