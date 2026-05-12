@@ -30,38 +30,38 @@ Each subdirectory contains an isolated dudect test for a specific function or mo
 
 Typical targets include:
 
-  -key generation
+ - key generation
 
-  -encapsulation
+ - encapsulation
 
-  -decapsulation
+ - decapsulation
 
-  -decrypt routines
+ - decrypt routines
 
-  -SHA3 / SHAKE wrappers
+ - SHA3 / SHAKE wrappers
 
-  -Keccak-f[1600]
+ - Keccak-f[1600]
 
-  -NTT operations
+ - NTT operations
 
-  -modular arithmetic
+ - modular arithmetic
 
-  -constant-time selection logic
+ - constant-time selection logic
 
-  -polynomial operations
+ - polynomial operations
 
 Examples of tested modules from the implementation:
 
-  -encapsulation routines
+ - encapsulation routines
   
-  -decapsulation and decrypt logic
+ - decapsulation and decrypt logic
   
-  -SHAKE sponge implementation
+ - SHAKE sponge implementation
   
-  -SHA3 wrappers
+ - SHA3 wrappers
   
-  -Keccak-f[1600] permutation
+ - Keccak-f[1600] permutation
   
-  -NTT implementation
+ - NTT implementation
   
-  -modular arithmetic and Barrett reduction
+ - modular arithmetic and Barrett reduction
