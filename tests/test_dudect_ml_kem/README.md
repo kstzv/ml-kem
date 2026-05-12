@@ -108,6 +108,7 @@ The tests are intended to be executed under multiple compiler toolchains and opt
 Typical optimization targets include:
 
  -O2
+ 
  -O3
 
 This is important because compiler optimizations may alter the timing behavior of low-level constant-time code.
@@ -127,4 +128,12 @@ The primary focus is on functions processing:
 
 Special attention is given to the decapsulation path and fallback logic used during invalid ciphertext handling.
 
+# Example dudect Output
+
+Typical dudect output may look similar to:
+
+meas:    1.00 M, max t: +1.32, max tau: 3.10e-03
+For the moment, maybe constant time.
+
+Lower absolute t-values generally indicate lower observable leakage under the tested conditions.
 
