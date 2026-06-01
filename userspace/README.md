@@ -90,6 +90,47 @@ Main entry points:
 
     int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 
+## Getting Started
+
+### Building
+
+   make
+
+This produces:
+
+   libmlkem.a
+
+### Example
+
+A complete usage example is available in:
+   example/basic.c
+
+Build the example:
+   gcc example/basic.c libmlkem.a -I. -o basic
+
+Run:
+   ./basic
+
+Expected output:
+   ML-KEM object created
+   ML-KEM object destroyed
+
+### Integration
+
+Include the public header:
+   #include "ml_kem.h"
+
+Compile your application and link against the library:
+   gcc your_program.c libmlkem.a -I. -o your_program
+
+The implementation currently targets:
+- ISO C11
+- GCC
+- Clang
+
+No external cryptographic libraries are required.
+
+
 ## License
 
 This project is dual-licensed under:
