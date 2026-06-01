@@ -92,9 +92,10 @@ Main entry points:
 
 ## Getting Started
 
-### Building
+Building:
 
    make
+   
 
 This produces:
 
