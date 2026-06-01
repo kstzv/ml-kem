@@ -94,7 +94,7 @@ Main entry points:
 
 Building:
 
-   make
+    make
    
 
 This produces:
