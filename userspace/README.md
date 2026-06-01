@@ -99,30 +99,30 @@ Building:
 
 This produces:
 
-   libmlkem.a
+    libmlkem.a
 
 ### Example
 
 A complete usage example is available in:
-   example/basic.c
+    example/basic.c
 
 Build the example:
-   gcc example/basic.c libmlkem.a -I. -o basic
+    gcc example/basic.c libmlkem.a -I. -o basic
 
 Run:
-   ./basic
+    ./basic
 
 Expected output:
-   ML-KEM object created
-   ML-KEM object destroyed
+    ML-KEM object created
+    ML-KEM object destroyed
 
 ### Integration
 
 Include the public header:
-   #include "ml_kem.h"
+    #include "ml_kem.h"
 
 Compile your application and link against the library:
-   gcc your_program.c libmlkem.a -I. -o your_program
+    gcc your_program.c libmlkem.a -I. -o your_program
 
 The implementation currently targets:
 - ISO C11
