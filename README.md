@@ -232,11 +232,16 @@ The project includes a Linux kernel-compatible build:
 
 ---
 
-## ⚙️ Build
+## ⚙️ Build and Usage
 
-### Userspace
+Build instructions, integration examples, API documentation and environment-specific notes are provided in the corresponding implementation directories.
 
-    gcc -std=c11 -O2 -Wall -Wextra *.c -o ml_kem
+Available documentation:
+
+userspace/README.md — Linux userspace implementation
+kernel/README.md — Linux kernel implementation
+
+Please refer to the README file of the target environment before building or integrating the project.
 
 ---
 
