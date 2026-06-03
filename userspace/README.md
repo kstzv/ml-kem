@@ -131,12 +131,47 @@ Compile your application and link against the library:
 
     gcc your_program.c libmlkem.a -I. -o your_program
 
+This command assumes that:
+
+  - `libmlkem.a` has been built in the current directory
+  - `ml_kem.h` is available in the current directory
+    
 The implementation currently targets:
 - ISO C11
 - GCC
 - Clang
 
 No external cryptographic libraries are required.
+
+### Using installed library (Arch Linux / Manjaro)
+
+If the library was installed from AUR:
+
+```
+yay -S ml-kem
+```
+
+Include the public header:
+
+```
+#include <ml_kem.h>
+```
+
+Compile your application:
+
+```
+gcc your_program.c -lmlkem -o your_program
+```
+
+The package installs:
+
+```
+/usr/include/ml_kem.h
+/usr/include/ml_kem_core_header.h
+/usr/lib/libmlkem.a
+```
+
+Therefore no additional include or library paths are required.
 
 
 ## License
