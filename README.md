@@ -238,8 +238,8 @@ Build instructions, integration examples, API documentation and environment-spec
 
 Available documentation:
 
-userspace/README.md — Linux userspace implementation
-kernel/README.md — Linux kernel implementation
+- userspace/README.md — Linux userspace implementation
+- kernel/README.md — Linux kernel implementation
 
 Please refer to the README file of the target environment before building or integrating the project.
 
