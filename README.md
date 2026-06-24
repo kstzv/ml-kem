@@ -2,7 +2,7 @@
 
 A low-level implementation of the ML-KEM (Kyber) post-quantum key encapsulation mechanism, written in pure C.
 
-This project focuses on correctness, transparency, and architectural clarity rather than premature optimization or production readiness.
+This project focuses on correctness, transparency, architectural clarity and predictable resource usage.
 
 ## 📌 Overview
 
@@ -15,7 +15,7 @@ The implementation follows standard C semantics to simplify porting across diffe
 ---
 
 ## ⚠️ Status
-Stable userspace release (v1.0.2)
+Stable userspace release (v1.1.0)
 
 ### Userspace implementation
 The userspace implementation is considered stable for tested x86-64 environments using GCC and Clang toolchains.
@@ -32,19 +32,19 @@ Validated using:
 - ✔ GCC and Clang testing
 
 ### Linux kernel implementation
-The Linux kernel module is currently experimental.
+
+The kernel implementation currently represents an earlier experimental integration effort and is not synchronized with the latest userspace implementation.
 
 Current status:
 - ✔ Builds successfully
 - ✔ Loads/unloads correctly
-- ✔ Shares the same core architecture as the userspace implementation
-- ✔ Designed for portability and future kernel-space validation
+- ✔ Demonstrates kernel-space integration of the ML-KEM core
+- ✔ Serves as a foundation for future Linux kernel work
 
-Planned:
-- ❌ Kernel-space KAT validation
-- ❌ AF_ALG-based testing
-- ❌ Extended kernel-space stress testing
-- ❌ Kernel-space constant-time validation
+Notes:
+- The current kernel code reflects an earlier development stage.
+- Future work is expected to target Linux kernel crypto infrastructure integration.
+- The userspace implementation is currently the primary development and validation target.
 
 ### Notes
 This project is intended as a practical low-level ML-KEM implementation focused on tested x86-64 environments.
@@ -119,10 +119,9 @@ The goal is to explore performance improvements without compromising portability
 | `ml_kem_encaps.c` | Encapsulation logic |
 | `ml_kem_decrypt.c` | Decapsulation (decryption + re-encapsulation) |
 | `ml_kem_ntt_main.c` | NTT and polynomial operations |
-| `math_operations.c` | Modular arithmetic (Barrett reduction, etc.) |
-| `ml_kem_sha.c` | SHA3-256 / SHA3-512 |
+| `ml_kem_sha3.c` | SHA3-256 / SHA3-512 |
 | `ml_kem_shake.c` | SHAKE128 / SHAKE256 |
-| `keccak_f1600_ct.c` | Keccak permutation |
+| `keccak1600.c` | Keccak permutation |
 | `ml_kem_pool.c` | Decapsulation pool implementation |
 
 ---
@@ -219,17 +218,25 @@ Detailed reproducible test setups and instructions are available in the `tests/`
 - Randomness quality analysis
 ---
 
+## Performance Evaluation
+
+Reproducible benchmark procedures, throughput measurements, stack usage analysis, memory usage measurements and PQClean comparisons are documented in:
+
+     portable/userspace/benchmarks/README.md
+
 ## 🐧 Kernel Support
 
-The project includes a Linux kernel-compatible build:
+The repository includes an experimental Linux kernel integration prototype.
 
-- No reliance on userspace-only APIs
-- Suitable for integration with kernel crypto subsystems (future work)
-- Potential use cases:
-  - Embedded systems
-  - Secure firmware
-  - In-kernel cryptographic services
+Current kernel-related work is primarily intended for architectural exploration and future integration with Linux kernel cryptographic infrastructure.
 
+Potential future directions include:
+
+- Integration with Linux crypto subsystems
+- Embedded and resource-constrained environments
+- In-kernel cryptographic services
+- Evaluation of reusable workspace and memory-management strategies
+  
 ---
 
 ## ⚙️ Build and Usage
