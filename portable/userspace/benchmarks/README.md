@@ -36,7 +36,7 @@ This will download the PQClean implementation used for the comparisons presented
 
 Go to:
 
-benchmarks/test_memory
+portable/userspace/benchmarks/test_memory
 
 And run:
 
@@ -47,7 +47,7 @@ And run:
 
 Go to:
 
-benchmarks/test_stack
+portable/userspace/benchmarks/test_stack
 
 And run:
 
@@ -60,7 +60,7 @@ And run:
 
 Go to:
 
-benchmarks/test_throughput
+portable/userspace/benchmarks/test_throughput
 
 And run:
 
