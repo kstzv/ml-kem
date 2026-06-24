@@ -73,7 +73,12 @@ Key principles:
 - Decapsulation pool:
   - lock-free slot acquisition
   - reduced allocation overhead
+- Reusable decapsulation pool
+- No runtime allocations during decapsulation
+- Small stack footprint
+- Constant-time oriented design
 
+  
 ---
 
 
@@ -101,6 +106,13 @@ Building:
 This produces:
 
     libmlkem.a
+
+
+## Benchmarks
+
+  Detailed benchmark results, memory usage measurements, stack usage analysis, and comparisons against PQClean are available in:
+
+     portable/userspace/benchmarks/README.md
 
 ### Example
 
