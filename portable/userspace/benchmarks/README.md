@@ -12,7 +12,7 @@
 
 # Test Environment
 
-All benchmarks were performed on an x86-64 system using GCC and Clang with optimization level -O3 and the following compilation flags:
+All benchmarks were performed on an x86-64 system using GCC with optimization level -O3 and the following compilation flags:
 
 -Wall -Wextra -pthread -fstack-usage
 
@@ -100,6 +100,8 @@ ml_kem_decaps_core() -> ml_kem_encapsulation() -> ml_kem_shake256() -> keccak_f1
 
 For PQClean, the values are taken from GCC `-fstack-usage` reports for the largest decapsulation-related function of each security level:
 PQCLEAN_MLKEM512_CLEAN_indcpa_enc(), PQCLEAN_MLKEM768_CLEAN_indcpa_enc and PQCLEAN_MLKEM1024_CLEAN_indcpa_enc()
+
+Note: Stack usage may vary across architectures, compiler versions, and optimization settings. The reported numbers correspond to the tested GCC -O3 build configuration.
 
 # Memory Usage
 
