@@ -16,6 +16,62 @@ All benchmarks were performed on an x86-64 system using GCC and Clang with optim
 
 -Wall -Wextra -pthread -fstack-usage
 
+# Using
+
+## Prerequisites
+
+To reproduce the benchmark results, you need to obtain the PQClean ML-KEM implementation.
+
+Go to: 
+
+portable/userspace/benchmarks/pqclean/
+
+and run:
+
+     git clone https://github.com/PQClean/PQClean
+
+This will download the PQClean implementation used for the comparisons presented in this document.
+
+## Memory Usage
+
+Go to:
+
+benchmarks/test_memory
+
+And run:
+
+     make
+     ./memory_usage
+
+## Stack Usage
+
+Go to:
+
+benchmarks/test_stack
+
+And run:
+
+     make userspace
+     make pq512
+     make pq768
+     make pq1024
+
+## Throughput
+
+Go to:
+
+benchmarks/test_throughput
+
+And run:
+
+     make
+     ./kstzv_throughput_ml_kem_512
+     ./pqclean_throughput_ml_kem_512
+     ./kstzv_throughput_ml_kem_768
+     ./pqclean_throughput_ml_kem_768
+     ./kstzv_throughput_ml_kem_1024
+     ./pqclean_throughput_ml_kem_1024
+
 # Throughput Benchmark
 
 By default, throughput benchmarks use 16 threads and 100,000 iterations per thread. These values are defined as compile-time constants and may be adjusted freely for additional testing.
