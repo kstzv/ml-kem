@@ -143,6 +143,8 @@ To achieve these goals, the implementation allocates additional persistent memor
 
 The presented benchmarks should therefore be viewed as a comparison of different implementation trade-offs rather than an attempt to optimize for a single metric. The implementation prioritizes predictable resource usage and reusable memory structures while maintaining competitive throughput.
 
+Note: performance may vary depending on processor microarchitecture, cache hierarchy, memory subsystem, and compiler optimizations. On the author's newer test system the implementation achieved throughput comparable to PQClean, while on an older system PQClean showed a moderate throughput advantage.
+
 
 # Contact
 
