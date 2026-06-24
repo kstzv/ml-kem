@@ -81,6 +81,11 @@ Key principles:
   
 ---
 
+## Benchmarks
+
+  Detailed benchmark results, memory usage measurements, stack usage analysis, and comparisons against PQClean are available in:
+
+     portable/userspace/benchmarks/README.md
 
 ## Public API
 
@@ -106,13 +111,6 @@ Building:
 This produces:
 
     libmlkem.a
-
-
-## Benchmarks
-
-  Detailed benchmark results, memory usage measurements, stack usage analysis, and comparisons against PQClean are available in:
-
-     portable/userspace/benchmarks/README.md
 
 ### Example
 
