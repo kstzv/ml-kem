@@ -34,6 +34,8 @@ Such gradual drift can arise from accumulated statistical bias, operating system
 
 Consequently, dudect results should always be interpreted together with the implementation itself, generated machine code, and repeated measurements under different compiler configurations and execution environments.
 
+The provided dudect tests are intended to facilitate independent verification on different architectures, compiler versions, and execution environments. If reproducible timing anomalies are observed, reports and independent analysis are welcome.
+
 # Directory Structure
 
 Each subdirectory contains an isolated dudect test for a specific function or module.
