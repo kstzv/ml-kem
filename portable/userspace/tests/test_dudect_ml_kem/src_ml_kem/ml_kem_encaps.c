@@ -16,9 +16,9 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk);
 void ml_kem_unpack_pk_t_u16(struct ml_kem_encaps_ctx *ctx);
 
 // Internal (file-local) helper functions
-static void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed);
+void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed);
 static int  ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed);
-static void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed);
+void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed);
 static void ml_kem_compress_ciphertext(struct ml_kem_encaps_ctx *ctx);
 static inline u16 ml_kem_compress(u16 x, u8 d);
 static void ml_kem_compress_and_pack(u8 *out, const u16 *coeffs, size_t n, u8 d);
@@ -290,7 +290,7 @@ void ml_kem_unpack_pk_t_u16(struct ml_kem_encaps_ctx *ctx)
 }
 
 // Generate ephemeral secret vector y (in NTT domain) from seed
-static void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed)
+void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 {
 	// Prepare internal seed: (seed || counter)
 	u8 inside_seed[ML_KEM_SEED_BYTES + 1];
@@ -411,7 +411,7 @@ static int ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 
 // Compute value v during encapsulation:
 // v = t * y + e2 + m
-static void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed)
+void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 {
 	for(size_t i = 0; i < ctx->k; i++)
 	{

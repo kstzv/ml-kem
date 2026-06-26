@@ -161,7 +161,6 @@ extern struct ml_kem_temp *ml_kem_temp_alloc(enum ml_kem_k level);
 extern struct ml_kem_ctx *ml_kem_ctx_alloc(enum ml_kem_k level);
 extern void ml_kem_destroy_temp_struct(struct ml_kem_temp *temp);
 extern void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx);
-extern void ml_kem_gen_polynomial_for_cbd(u16 *poly, const u8 *stream, const u8 eta);
 extern int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, int suma_bytes);
 
 // Secure memory wipe (File #2)
@@ -259,6 +258,77 @@ static inline u16 ml_kem_sub_mod(u16 a, u16 b)
 {
 	u16 x = (u16)(a + ML_KEM_Q - b);
     return ml_kem_ct_sub_if_ge(x);
+}
+
+//====================================CBD=============================================================
+
+
+// CBD for eta == 3
+static inline u32 load24_littleendian(const u8 *x)
+{
+    return (u32)x[0]
+         | ((u32)x[1] << 8)
+         | ((u32)x[2] << 16);
+}
+
+static inline void cbd3(u16 *r, const u8 *buf)
+{
+    for (int i = 0; i < ML_KEM_N / 4; i++) {
+
+        u32 t = load24_littleendian(buf + 3 * i);
+
+        u32 d = t & 0x00249249;
+        d += (t >> 1) & 0x00249249;
+        d += (t >> 2) & 0x00249249;
+
+        for (int j = 0; j < 4; j++) {
+
+            u32 a = (d >> (6 * j)) & 0x7;
+            u32 b = (d >> (6 * j + 3)) & 0x7;
+
+            r[4 * i + j] = ml_kem_sub_mod((u16)a, (u16)b);
+        }
+    }
+}
+
+
+// CBD for eta == 2
+static inline u32 load32_littleendian(const u8 *x)
+{
+    return (u32)x[0]
+         | ((u32)x[1] << 8)
+         | ((u32)x[2] << 16)
+         | ((u32)x[3] << 24);
+}
+
+static inline void cbd2(u16 *r, const u8 *buf)
+{
+    for (int i = 0; i < ML_KEM_N / 8; i++) {
+        u32 t = load32_littleendian(buf + 4 * i);
+
+        u32 d = t & 0x55555555;
+        d += (t >> 1) & 0x55555555;
+
+        for (int j = 0; j < 8; j++) {
+            u32 a = (d >> (4 * j)) & 0x3;
+            u32 b = (d >> (4 * j + 2)) & 0x3;
+
+            r[8 * i + j] = ml_kem_sub_mod((u16)a, (u16)b);
+        }
+    }
+}
+
+static inline void ml_kem_gen_polynomial_for_cbd(u16 *poly, const u8 *stream, const u8 eta)
+{
+	if(eta == ML_KEM_CBD_ETA_3)
+	{
+		cbd3(poly, stream);
+	}else if(eta == ML_KEM_CBD_ETA_2)
+	{
+		cbd2(poly, stream);
+	}else{
+		return;
+	}
 }
 
 #endif /* ML_KEM_KYBER_H */

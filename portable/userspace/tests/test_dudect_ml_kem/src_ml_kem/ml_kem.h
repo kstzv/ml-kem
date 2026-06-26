@@ -81,4 +81,10 @@ void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
 //  - Output is always written in constant time
 int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 
+// INTERNAL FUNCTION EXPOSED FOR TESTING
+// The following function are normally declared as `static` in their respective compilation units
+// It is exposed here ONLY for dudect-based constant-time analysis
+// WARNING: 1. Not part of the public API; 2. Not intended for external use;
+void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+
 #endif

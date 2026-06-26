@@ -12,9 +12,9 @@ void ml_kem_wipe_decrypt(struct ml_kem_decrypt_ctx *ctx_decry);
 void ml_kem_decrypt(struct ml_kem_decrypt_ctx *ctx_decry, u8 *ciphertext);
 
 // Internal (static) helpers
-static void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry);
-static void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry);
-static inline u8 ml_kem_decode1_bit(u16 w);
+void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry);
+void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry);
+u8 ml_kem_decode1_bit(u16 w);
 static inline u16 ml_kem_decompress_one_coeff(u16 y, u8 d_u);
 static void ml_kem_decompress_one_poly(u16 *poly, u8 *compress_poly, const u8 d);
 static void ml_kem_decompress(struct ml_kem_decrypt_ctx *ctx);
@@ -53,7 +53,7 @@ void ml_kem_decrypt(struct ml_kem_decrypt_ctx *ctx_decry, u8 *ciphertext)
 	
 // Compute resulting polynomial from ML-KEM decryption formula
 // Result: poly = v - sum(u_i * s_i)
-static void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry)
+void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry)
 {	
 	// Compute inner product <u, s> in NTT domain
 	for(size_t i = 0; i < ctx_decry->ctx->k; i++)
@@ -81,7 +81,7 @@ static void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry)
 }
 
 // Extract final 32-byte message seed (m) from decrypted polynomial
-static void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry)
+void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry)
 {
 	// Each coefficient encodes 1 bit → reconstruct 256-bit message
 	for (int i = 0; i < 256; i++) 
@@ -102,7 +102,7 @@ static void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry)
 //   This implementation relies on arithmetic to avoid branches,
 //   but constant-time behavior depends on compiler optimizations.
 //   May require future hardening (e.g., via assembly or verified CT pattern).
-static inline u8 ml_kem_decode1_bit(u16 w)
+u8 ml_kem_decode1_bit(u16 w)
 {
     u32 lo = (u32)w - 833u;
     u32 hi = 2496u - (u32)w;

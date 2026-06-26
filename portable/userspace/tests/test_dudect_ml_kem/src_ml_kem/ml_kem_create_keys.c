@@ -16,7 +16,6 @@ struct ml_kem_temp *ml_kem_temp_alloc(enum ml_kem_k level);
 struct ml_kem_ctx *ml_kem_ctx_alloc(enum ml_kem_k level);
 void ml_kem_destroy_temp_struct(struct ml_kem_temp *temp);
 void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx);
-void ml_kem_gen_polynomial_for_cbd(u16 *poly, const u8 *stream, const u8 eta);
 int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, int suma_bytes);
 
 // Secure memory wipe (implementation-defined)
@@ -24,7 +23,7 @@ void ml_kem_memzero(void *ptr, size_t len);
 
 // Internal (static) helpers
 static int ml_kem_generation_entropy(struct ml_kem_temp *temp);
-static void ml_kem_create_vector_poly(struct ml_kem_temp *temp);
+void ml_kem_create_vector_poly(struct ml_kem_temp *temp);
 static int ml_kem_create_public_key(struct ml_kem_temp *temp);
 static void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx);
 static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx);
@@ -308,7 +307,7 @@ static int ml_kem_generation_entropy(struct ml_kem_temp *temp)
 //   3. sample coefficients via CBD
 //   4. convert the polynomial to NTT domain
 // The resulting vector is stored in temp->secret.
-static void ml_kem_create_vector_poly(struct ml_kem_temp *temp)
+void ml_kem_create_vector_poly(struct ml_kem_temp *temp)
 {
 	// Local seed buffer: seed_sigma || 1-byte counter
 	u8 local_seed[ML_KEM_SEED_BYTES + 1];
@@ -486,107 +485,6 @@ static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx)
 	ml_kem_sha3_256(ctx->h_pk, ctx->public_key_msg, ctx->public_key_msg_len);
 
 	return 0;
-}
-	
-	
-// Centered Binomial Distribution (CBD) sampler for ML-KEM.
-// This function generates a polynomial where each coefficient is sampled as:
-//   coeff = HW(x_bits) - HW(y_bits)
-// where HW(.) is the Hamming weight of eta bits.
-// Input stream is consumed sequentially, as required by the specification.
-// Depending on eta:
-//   eta = 2:
-//     - 4 bits per coefficient (2 for x, 2 for y)
-//     - 64-bit buffer → 16 coefficients per iteration
-//   eta = 3:
-//     - 6 bits per coefficient (3 for x, 3 for y)
-//     - 48-bit buffer → 8 coefficients per iteration
-// Bits are processed in order: first x bits, then y bits.
-// Final coefficient is reduced modulo q (3329).
-void ml_kem_gen_polynomial_for_cbd(u16 *poly, const u8 *stream, const u8 eta)
-{
-	// Number of bits in one byte (used for shifts)
-	const int size_bytes = 8;
-
-	// Bit buffer (up to 64 bits)
-	u64 buffer = 0;
-	
-	// Determine package size depending on eta
-	int one_package_bits;
-	int one_package_bytes;
-	int number_bytes = eta * 64; // 128 bytes (eta=2) or 192 bytes (eta=3)
-
-	if(eta == 2)
-	{
-		// 64-bit package → 16 coefficients
-		one_package_bits = 64;
-		one_package_bytes = 8;
-	}
-	else
-	{
-		// 48-bit package → 8 coefficients
-		one_package_bits = 48;
-		one_package_bytes = 6;
-	}
-
-	// Accumulators for Hamming weights
-	u8 x = 0;
-	u8 y = 0;
-	
-	// Stream index
-	int i = 0;
-
-	// Output coefficient index
-	int conter_coeff = 0;
-
-	// Bit/byte tracking inside buffer
-	int size_bytes_counter = 0;
-	int counter_bits = 0;
-	
-	// Main loop over input stream
-	while(i < number_bytes)
-	{
-		// Load next package (aligned to full bytes)
-		for(int j = 0; j < one_package_bytes; j++)
-		{
-			buffer |= (u64)stream[i] << size_bytes_counter;
-			size_bytes_counter += size_bytes;
-			i++;
-		}
-		
-		// Extract coefficients from buffer
-		while(counter_bits < one_package_bits)
-		{
-			// Read eta bits for x (Hamming weight)
-			for(int j = 0; j < eta; j++)
-			{
-				x += buffer & 1;
-				buffer >>= 1;
-				counter_bits++;
-			}
-			
-			// Read eta bits for y (Hamming weight)
-			for(int j = 0; j < eta; j++)
-			{
-				y += buffer & 1;
-				buffer >>= 1;
-				counter_bits++;
-			}
-			
-			// Compute coefficient: x - y (mod q)
-			poly[conter_coeff] = ml_kem_sub_mod(x, y);
-			
-			// Reset accumulators for next coefficient
-			conter_coeff++;
-			x = 0;
-			y = 0;
-		}
-		
-		// Reset buffer and counters for next package
-		buffer = 0;
-		size_bytes_counter = 0;
-		counter_bits = 0;
-	}		
 }
 		
 		

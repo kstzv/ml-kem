@@ -16,8 +16,6 @@ struct ml_kem_temp *ml_kem_temp_alloc(enum ml_kem_k level);
 struct ml_kem_ctx *ml_kem_ctx_alloc(enum ml_kem_k level);
 void ml_kem_destroy_temp_struct(struct ml_kem_temp *temp);
 void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx);
-void ml_kem_gen_polynomial_for_cbd(u16 *poly, const u8 *stream, const u8 eta);
-int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, int suma_bytes);
 
 // Secure memory wipe (implementation-defined)
 void ml_kem_memzero(void *ptr, size_t len);
@@ -487,151 +485,9 @@ static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx)
 
 	return 0;
 }
-	
-	
-// Centered Binomial Distribution (CBD) sampler for ML-KEM.
-// This function generates a polynomial where each coefficient is sampled as:
-//   coeff = HW(x_bits) - HW(y_bits)
-// where HW(.) is the Hamming weight of eta bits.
-// Input stream is consumed sequentially, as required by the specification.
-// Depending on eta:
-//   eta = 2:
-//     - 4 bits per coefficient (2 for x, 2 for y)
-//     - 64-bit buffer → 16 coefficients per iteration
-//   eta = 3:
-//     - 6 bits per coefficient (3 for x, 3 for y)
-//     - 48-bit buffer → 8 coefficients per iteration
-// Bits are processed in order: first x bits, then y bits.
-// Final coefficient is reduced modulo q (3329).
-void ml_kem_gen_polynomial_for_cbd(u16 *poly, const u8 *stream, const u8 eta)
-{
-	// Number of bits in one byte (used for shifts)
-	const int size_bytes = 8;
-
-	// Bit buffer (up to 64 bits)
-	u64 buffer = 0;
-	
-	// Determine package size depending on eta
-	int one_package_bits;
-	int one_package_bytes;
-	int number_bytes = eta * 64; // 128 bytes (eta=2) or 192 bytes (eta=3)
-
-	if(eta == 2)
-	{
-		// 64-bit package → 16 coefficients
-		one_package_bits = 64;
-		one_package_bytes = 8;
-	}
-	else
-	{
-		// 48-bit package → 8 coefficients
-		one_package_bits = 48;
-		one_package_bytes = 6;
-	}
-
-	// Accumulators for Hamming weights
-	u8 x = 0;
-	u8 y = 0;
-	
-	// Stream index
-	int i = 0;
-
-	// Output coefficient index
-	int conter_coeff = 0;
-
-	// Bit/byte tracking inside buffer
-	int size_bytes_counter = 0;
-	int counter_bits = 0;
-	
-	// Main loop over input stream
-	while(i < number_bytes)
-	{
-		// Load next package (aligned to full bytes)
-		for(int j = 0; j < one_package_bytes; j++)
-		{
-			buffer |= (u64)stream[i] << size_bytes_counter;
-			size_bytes_counter += size_bytes;
-			i++;
-		}
-		
-		// Extract coefficients from buffer
-		while(counter_bits < one_package_bits)
-		{
-			// Read eta bits for x (Hamming weight)
-			for(int j = 0; j < eta; j++)
-			{
-				x += buffer & 1;
-				buffer >>= 1;
-				counter_bits++;
-			}
-			
-			// Read eta bits for y (Hamming weight)
-			for(int j = 0; j < eta; j++)
-			{
-				y += buffer & 1;
-				buffer >>= 1;
-				counter_bits++;
-			}
-			
-			// Compute coefficient: x - y (mod q)
-			poly[conter_coeff] = ml_kem_sub_mod(x, y);
-			
-			// Reset accumulators for next coefficient
-			conter_coeff++;
-			x = 0;
-			y = 0;
-		}
-		
-		// Reset buffer and counters for next package
-		buffer = 0;
-		size_bytes_counter = 0;
-		counter_bits = 0;
-	}		
-}
 		
 		
-// Sample polynomial coefficients for matrix A using rejection sampling (FIPS 203, Algorithm 7 - SampleNTT).
-// Input stream is interpreted as a sequence of 12-bit values.
-// Every 3 bytes produce two 12-bit candidates:
-//   d1 = lower 12 bits  (byte0 + lower 4 bits of byte1)
-//   d2 = upper 12 bits  (upper 4 bits of byte1 + byte2)
-// Only values < q (3329) are accepted.
-// Rejected values are skipped, and sampling continues.
-// NOTE:
-//   If input bytes are insufficient, function returns -ENOMEM.
-//   Caller is expected to extend the stream (e.g., via SHAKE) and retry.
-int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, int suma_bytes)
-{
-	int j = 0;		// Output coefficient index
-	size_t pos = 0; // Position in input stream
 
-	// Temporary candidates (12-bit values)
-	u16 d1 = 0;
-	u16 d2 = 0;
-        
-	// Generate ML_KEM_N coefficients
-	while (j < ML_KEM_N)
-	{
-		if(suma_bytes < 3) { return -ENOMEM; } 			 // Need at least 3 bytes to extract two candidates
-		d1 = stream[pos] | ((stream[pos+1] & 0xF) << 8); // Extract first 12-bit value: byte0 + lower 4 bits of byte1
-		d2 = (stream[pos+1] >> 4) | (stream[pos+2] << 4);// Extract second 12-bit value: upper 4 bits of byte1 + byte2
-
-		// Accept values strictly less than q
-		if (d1 < ML_KEM_Q) { poly[j++] = d1; }
-        if (d2 < ML_KEM_Q && j < ML_KEM_N) { poly[j++] = d2; }
-
-		// Advance stream position
-        pos += 3;
-
-		// Reset temporary variables
-        d1 = d2 = 0;
-
-		// Track remaining bytes
-        suma_bytes -= 3;
-	} 
-
-	return suma_bytes;
-}
 	
 // Secure memory wipe function.
 //

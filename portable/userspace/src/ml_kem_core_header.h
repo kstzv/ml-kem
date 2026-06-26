@@ -158,8 +158,6 @@ extern struct ml_kem_temp *ml_kem_temp_alloc(enum ml_kem_k level);
 extern struct ml_kem_ctx *ml_kem_ctx_alloc(enum ml_kem_k level);
 extern void ml_kem_destroy_temp_struct(struct ml_kem_temp *temp);
 extern void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx);
-extern void ml_kem_gen_polynomial_for_cbd(u16 *poly, const u8 *stream, const u8 eta);
-extern int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, int suma_bytes);
 
 // Secure memory wipe (File #2)
 extern void ml_kem_memzero(void *ptr, size_t len);
@@ -256,6 +254,122 @@ static inline u16 ml_kem_sub_mod(u16 a, u16 b)
 {
 	u16 x = (u16)(a + ML_KEM_Q - b);
     return ml_kem_ct_sub_if_ge(x);
+}
+
+//====================================CBD=============================================================
+
+
+// CBD for eta == 3
+static inline u32 load24_littleendian(const u8 *x)
+{
+    return (u32)x[0]
+         | ((u32)x[1] << 8)
+         | ((u32)x[2] << 16);
+}
+
+static inline void cbd3(u16 *r, const u8 *buf)
+{
+    for (int i = 0; i < ML_KEM_N / 4; i++) {
+
+        u32 t = load24_littleendian(buf + 3 * i);
+
+        u32 d = t & 0x00249249;
+        d += (t >> 1) & 0x00249249;
+        d += (t >> 2) & 0x00249249;
+
+        for (int j = 0; j < 4; j++) {
+
+            u32 a = (d >> (6 * j)) & 0x7;
+            u32 b = (d >> (6 * j + 3)) & 0x7;
+
+            r[4 * i + j] = ml_kem_sub_mod((u16)a, (u16)b);
+        }
+    }
+}
+
+
+// CBD for eta == 2
+static inline u32 load32_littleendian(const u8 *x)
+{
+    return (u32)x[0]
+         | ((u32)x[1] << 8)
+         | ((u32)x[2] << 16)
+         | ((u32)x[3] << 24);
+}
+
+static inline void cbd2(u16 *r, const u8 *buf)
+{
+    for (int i = 0; i < ML_KEM_N / 8; i++) {
+        u32 t = load32_littleendian(buf + 4 * i);
+
+        u32 d = t & 0x55555555;
+        d += (t >> 1) & 0x55555555;
+
+        for (int j = 0; j < 8; j++) {
+            u32 a = (d >> (4 * j)) & 0x3;
+            u32 b = (d >> (4 * j + 2)) & 0x3;
+
+            r[8 * i + j] = ml_kem_sub_mod((u16)a, (u16)b);
+        }
+    }
+}
+
+static inline void ml_kem_gen_polynomial_for_cbd(u16 *poly, const u8 *stream, const u8 eta)
+{
+	if(eta == ML_KEM_CBD_ETA_3)
+	{
+		cbd3(poly, stream);
+	}else if(eta == ML_KEM_CBD_ETA_2)
+	{
+		cbd2(poly, stream);
+	}else{
+		return;
+	}
+}
+
+//----------------------------------------------------ALGORITHM-7----------------------------------------------
+
+// Sample polynomial coefficients for matrix A using rejection sampling (FIPS 203, Algorithm 7 - SampleNTT).
+// Input stream is interpreted as a sequence of 12-bit values.
+// Every 3 bytes produce two 12-bit candidates:
+//   d1 = lower 12 bits  (byte0 + lower 4 bits of byte1)
+//   d2 = upper 12 bits  (upper 4 bits of byte1 + byte2)
+// Only values < q (3329) are accepted.
+// Rejected values are skipped, and sampling continues.
+// NOTE:
+//   If input bytes are insufficient, function returns -ENOMEM.
+//   Caller is expected to extend the stream (e.g., via SHAKE) and retry.
+static inline int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, int suma_bytes)
+{
+	int j = 0;		// Output coefficient index
+	size_t pos = 0; // Position in input stream
+
+	// Temporary candidates (12-bit values)
+	u16 d1 = 0;
+	u16 d2 = 0;
+        
+	// Generate ML_KEM_N coefficients
+	while (j < ML_KEM_N)
+	{
+		if(suma_bytes < 3) { return -ENOMEM; } 			 // Need at least 3 bytes to extract two candidates
+		d1 = stream[pos] | ((stream[pos+1] & 0xF) << 8); // Extract first 12-bit value: byte0 + lower 4 bits of byte1
+		d2 = (stream[pos+1] >> 4) | (stream[pos+2] << 4);// Extract second 12-bit value: upper 4 bits of byte1 + byte2
+
+		// Accept values strictly less than q
+		if (d1 < ML_KEM_Q) { poly[j++] = d1; }
+        if (d2 < ML_KEM_Q && j < ML_KEM_N) { poly[j++] = d2; }
+
+		// Advance stream position
+        pos += 3;
+
+		// Reset temporary variables
+        d1 = d2 = 0;
+
+		// Track remaining bytes
+        suma_bytes -= 3;
+	} 
+
+	return suma_bytes;
 }
 
 #endif /* ML_KEM_KYBER_H */
