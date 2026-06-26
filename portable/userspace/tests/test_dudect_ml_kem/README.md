@@ -24,6 +24,16 @@ The tested implementation itself is based on the ML-KEM standard defined in FIPS
 
 Core API and structures are defined in the public headers of the implementation.
 
+# Interpreting Long dudect Runs
+
+During extended dudect runs involving tens or hundreds of millions of measurements, some low-level arithmetic routines may exhibit a slow, gradual increase of the reported t-statistic.
+
+In the performed experiments, this increase was smooth and progressive rather than abrupt. No sudden jumps or rapid divergence—behavior commonly associated with strong timing leakage—were observed.
+
+Such gradual drift can arise from accumulated statistical bias, operating system scheduling, compiler optimizations, microarchitectural effects, or other measurement noise present in long-running experiments.
+
+Consequently, dudect results should always be interpreted together with the implementation itself, generated machine code, and repeated measurements under different compiler configurations and execution environments.
+
 # Directory Structure
 
 Each subdirectory contains an isolated dudect test for a specific function or module.
