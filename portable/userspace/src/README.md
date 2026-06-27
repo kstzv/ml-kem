@@ -91,11 +91,11 @@ Key principles:
 
 Main entry points:
 
-    struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count);
+    struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
 
     void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
 
-    u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result);
+    u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result, ml_kem_entropy_fn entropy);
 
     void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
 
