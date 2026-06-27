@@ -15,7 +15,7 @@ The implementation follows standard C semantics to simplify porting across diffe
 ---
 
 ## ⚠️ Status
-Stable userspace release (v1.1.0)
+Stable userspace release (v1.2.0)
 
 ### Userspace implementation
 The userspace implementation is considered stable for tested x86-64 environments using GCC and Clang toolchains.
