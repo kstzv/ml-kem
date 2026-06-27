@@ -145,7 +145,7 @@ int main()
 			// Perform encapsulation: input: public key + message seed
 			// Output: shared secret (mass_k_from_encaps) and ciphertext (returned pointer)
 			u8 *curr_ciphertext;
-			curr_ciphertext = ml_kem_encaps_core(mass_ek, k, mass_k_from_encaps);
+			curr_ciphertext = ml_kem_encaps_core(mass_ek, k, mass_k_from_encaps, NULL);
 			if(curr_ciphertext == NULL) { return -1; }
 			
 			// Verify shared secret

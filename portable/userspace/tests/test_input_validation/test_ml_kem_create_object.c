@@ -23,15 +23,15 @@ int main(void)
 		size_t temp;
 		
 		temp = (rand()%128) + 1;
-		ctx_512 = ml_kem_create_object(2, temp);
+		ctx_512 = ml_kem_create_object(2, temp, NULL);
 		if(ctx_512 == NULL) { printf("Error: in ML_KEM_512"); return -1; }
 		
 		temp = (rand()%128) + 1;
-		ctx_768 = ml_kem_create_object(3, temp);
+		ctx_768 = ml_kem_create_object(3, temp, NULL);
 		if(ctx_768 == NULL) { printf("Error: in ML_KEM_768"); return -1; }
 		
 		temp = (rand()%128) + 1;
-		ctx_1024 = ml_kem_create_object(4, temp);
+		ctx_1024 = ml_kem_create_object(4, temp, NULL);
 		if(ctx_1024 == NULL) { printf("Error: in ML_KEM_1024"); return -1; }
 		
 		size_t wrong_level = 0;
@@ -45,7 +45,7 @@ int main(void)
 			if(temp >= 128 && (wrong_level > 1 && wrong_level <= 4)) { break; }
 		}
 		
-		ctx_wrong = ml_kem_create_object(wrong_level, temp);
+		ctx_wrong = ml_kem_create_object(wrong_level, temp, NULL);
 		if(ctx_wrong != NULL) 
 		{ 
 			printf("Error: It got wrong datas!"); 

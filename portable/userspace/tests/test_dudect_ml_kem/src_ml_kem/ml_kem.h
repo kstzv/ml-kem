@@ -19,13 +19,14 @@
 // Parameters:
 //  level              - ML-KEM security level (ML_KEM_512 / 768 / 1024)
 //  ml_kem_pool_count  - number of decapsulation slots in pool
+//  entropy - callback used to obtain cryptographically secure random bytes. Pass NULL to use the operating system random source
 // Returns:
 //  Pointer to initialized pool context on success
 //  NULL on allocation or initialization failure
 // Notes:
 //  - The pool holds all persistent and per-slot contexts
 //  - Intended for repeated decapsulation operations
-struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count);
+struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
 
 
 // Destroy decapsulation pool object.
@@ -49,7 +50,7 @@ void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
 //  - Caller is responsible for freeing ciphertext via
 //    ml_kem_ciphertext_destroy_core()
 //  - Result buffer is always zero-initialized before use
-u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result);
+u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result, ml_kem_entropy_fn entropy);
 
 
 // Destroy ciphertext buffer returned by encapsulation.

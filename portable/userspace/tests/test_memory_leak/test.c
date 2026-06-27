@@ -15,7 +15,7 @@ int main(void)
     {
 		// Create ML-KEM object
         struct ml_kem_pool_decaps_ctx *ctx;
-        ctx = ml_kem_create_object(ML_KEM_768, SLOTS);
+        ctx = ml_kem_create_object(ML_KEM_768, SLOTS, NULL);
         if(!ctx)
         {
             printf("create failed\n");
@@ -28,7 +28,7 @@ int main(void)
         u8 *ciphertext;
 
 		// Encaps
-        ciphertext = ml_kem_encaps_core(ctx->ml_kem_pool[0].encaps_ctx->public_key_msg, ML_KEM_768, result_enc);
+        ciphertext = ml_kem_encaps_core(ctx->ml_kem_pool[0].encaps_ctx->public_key_msg, ML_KEM_768, result_enc, NULL);
         if(!ciphertext)
         {
             printf("encaps failed\n");

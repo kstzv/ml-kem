@@ -6,9 +6,9 @@
 #include "ml_kem.h"
 
 // Forward declarations of public API functions (redeclared for internal usage)
-struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count);
+struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
 void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
-u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result);
+u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result, ml_kem_entropy_fn entropy);
 void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
 int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 
@@ -21,12 +21,13 @@ void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphert
 // Parameters:
 //  level              - security level (ML_KEM_512 / 768 / 1024)
 //  ml_kem_pool_count  - number of parallel decapsulation slots
+//  entropy - callback used to obtain cryptographically secure random bytes. Pass NULL to use the operating system random source
 // Returns:
 //  Pointer to initialized pool context on success, NULL on failure.
 // Notes:
 //  - Pool defines maximum parallel decapsulation operations for a single keypair
 //  - All key material is stored inside ctx_keys and shared across pool slots
-struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count)
+struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy)
 {
 	// Validate security level
 	if(level != ML_KEM_512 && level != ML_KEM_768 && level != ML_KEM_1024)
@@ -51,7 +52,7 @@ struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t 
 	if(!temp_keys) { goto error_exit; }
 	
 	// Generate keypair
-	int ret = ml_kem_create_ctx_struct(temp_keys, ctx_keys);
+	int ret = ml_kem_create_ctx_struct(temp_keys, ctx_keys, entropy);
 	if(ret != 0) 
 	{ 
 		ml_kem_destroy_temp_struct(temp_keys); 
@@ -101,6 +102,7 @@ void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool)
 //  pk     - public key in serialized byte format (as defined by ML-KEM spec)
 //  level  - security level (ML_KEM_512 / 768 / 1024)
 //  result - output buffer (32 bytes) for shared secret (K_bar)
+//  entropy - callback used to obtain cryptographically secure random bytes. Pass NULL to use the operating system random source
 // Returns:
 //  Pointer to newly allocated ciphertext buffer (serialized format),
 //  or NULL on failure.
@@ -111,7 +113,7 @@ void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool)
 //  - This is a high-level convenience wrapper over ml_kem_encapsulation()
 //  - Internally allocates temporary context which is securely wiped before free
 //  - No secret-dependent branching occurs in this wrapper
-u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result)
+u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result, ml_kem_entropy_fn entropy)
 {
 	// Result pointer initialized to NULL (returned on failure)
 	u8 *ciphertext;
@@ -132,7 +134,7 @@ u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result)
 	if(!ctx) { return ciphertext; }
 	
 	// Perform encapsulation (client mode: msg=NULL, hash_pk=NULL)
-	ml_kem_encapsulation(ctx, NULL, NULL);
+	ml_kem_encapsulation(ctx, NULL, NULL, entropy);
 	if(!ctx) { goto exit; }
 	
 	// Allocate memory for final ciphertext
@@ -242,7 +244,7 @@ int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size
 	
 	// Step 2: Re-encapsulate using recovered m and stored h(pk)
 	// This reconstructs expected ciphertext and shared secret
-	ml_kem_encapsulation(pool->ml_kem_pool[curr_slot].encaps_ctx, pool->ml_kem_pool[curr_slot].decrypt_ctx->m, pool->ml_kem_pool[curr_slot].decrypt_ctx->ctx->h_pk);
+	ml_kem_encapsulation(pool->ml_kem_pool[curr_slot].encaps_ctx, pool->ml_kem_pool[curr_slot].decrypt_ctx->m, pool->ml_kem_pool[curr_slot].decrypt_ctx->ctx->h_pk, NULL);
 	
 	// Steps from 3 to 6 doing in this local functions. This functions must be CT
 	ml_kem_decaps_ct_select_ss(pool, ciphertext, len_ciphertext, result, curr_slot);

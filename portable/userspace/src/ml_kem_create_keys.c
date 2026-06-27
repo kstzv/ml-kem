@@ -11,21 +11,22 @@
 #include "ml_kem_core_header.h"
 
 // External (cross-module) function declarations
-int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx);
+int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx, ml_kem_entropy_fn entropy);
 struct ml_kem_temp *ml_kem_temp_alloc(enum ml_kem_k level);
 struct ml_kem_ctx *ml_kem_ctx_alloc(enum ml_kem_k level);
 void ml_kem_destroy_temp_struct(struct ml_kem_temp *temp);
 void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx);
+int ml_kem_entropy(void *buf, size_t len);
 
 // Secure memory wipe (implementation-defined)
 void ml_kem_memzero(void *ptr, size_t len);
 
 // Internal (static) helpers
-static int ml_kem_generation_entropy(struct ml_kem_temp *temp);
+static int ml_kem_generation_entropy(struct ml_kem_temp *temp,  ml_kem_entropy_fn entropy);
 static void ml_kem_create_vector_poly(struct ml_kem_temp *temp);
 static int ml_kem_create_public_key(struct ml_kem_temp *temp);
 static void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx);
-static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx);
+static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx,  ml_kem_entropy_fn entropy);
 
 
 // Main key generation routine.
@@ -38,10 +39,11 @@ static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx);
 // Arguments:
 //   temp - temporary working structure (must be pre-allocated)
 //   ctx  - persistent context (output, must be pre-allocated)
+//   entropy - callback used to obtain cryptographically secure random bytes. NULL if using the operating system's random data source
 // Returns:
 //   0 on success
 //   negative error code (e.g. -EINVAL) on failure
-int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx)
+int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx, ml_kem_entropy_fn entropy)
 {
 	// Validate temporary structure and its internal buffers
 	if(!temp || !temp->poly || !temp->raw_bytes || !temp->secret || !temp->public_key)
@@ -59,7 +61,7 @@ int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx)
 	{ return -EINVAL; }
 	
 	// Step 1: Generate entropy and derive seed_rho / seed_sigma
-	int ret = ml_kem_generation_entropy(temp);
+	int ret = ml_kem_generation_entropy(temp, entropy);
 	if(ret != 0) { return ret;}
 	
 	// Step 2: Generate secret key vector s (CBD sampling in NTT domain)
@@ -73,7 +75,7 @@ int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx)
 	ml_kem_convert_to_bytes_format_and_copy(temp, ctx);
 	
 	// Step 5: Finalize context (generate z and H(pk))
-	ret = ml_kem_finally_create_z_and_h_pk(ctx);
+	ret = ml_kem_finally_create_z_and_h_pk(ctx, entropy);
 	if(ret != 0) { return ret;}
 	
 	return 0;
@@ -262,24 +264,18 @@ void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx)
 // Generate initial entropy and derive seed_rho / seed_sigma.
 // FIPS 203-compatible approach: sample 32 random bytes, append parameter k,
 // Then expand with SHA3-512 into two independent 32-byte seeds.
-static int ml_kem_generation_entropy(struct ml_kem_temp *temp)
+static int ml_kem_generation_entropy(struct ml_kem_temp *temp, ml_kem_entropy_fn entropy)
 {
 	u8 first_seed[ML_KEM_SEED_BYTES + 1];          // 32-byte random seed || 1-byte parameter k
     u8 seeds_rho_and_sigma[ML_KEM_SEED_BYTES * 2]; // 64-byte SHA3-512 output: rho || sigma
     
     // Read 32 bytes of system entropy
-    size_t offset = 0;
-    ssize_t ret = 0;
-    ssize_t len = ML_KEM_SEED_BYTES;
-    while(offset < ML_KEM_SEED_BYTES)
+    if(entropy == NULL)
     {
-		ret = getrandom(first_seed + offset, len - offset, 0);
-		if(ret < 0) 
-		{ 
-			if(errno == EINTR) { continue; }
-			return -1; 
-		}
-		offset += ret;
+		if(ml_kem_entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -1; }
+	}else
+	{
+		if(entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -1; }
 	}
 	
 	// Append ML-KEM parameter k (matrix/vector dimension)
@@ -463,21 +459,15 @@ static void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, st
 // Generate auxiliary values for decapsulation:
 //   - z    : random fallback secret
 //   - h_pk : hash of serialized public key
-static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx)
+static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx, ml_kem_entropy_fn entropy)
 {
 	// Fill z with 32 bytes of system entropy
-    size_t offset = 0;
-    ssize_t ret = 0;
-    ssize_t len = ML_KEM_SEED_BYTES;
-    while(offset < ML_KEM_SEED_BYTES)
+	if(entropy == NULL)
     {
-		ret = getrandom(ctx->z + offset, len - offset, 0);
-		if(ret < 0) 
-		{ 
-			if(errno == EINTR) { continue; }
-			return -1; 
-		}
-		offset += ret;
+		if(ml_kem_entropy(ctx->z, ML_KEM_SEED_BYTES) != 0) { return -1; }
+	}else
+	{
+		if(entropy(ctx->z, ML_KEM_SEED_BYTES) != 0) { return -1; }
 	}
 	
 	// Compute hash of public key (used in KDF during encaps/decaps)
@@ -485,10 +475,25 @@ static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx)
 
 	return 0;
 }
-		
-		
-
 	
+// Local function entropy ML-KEM (Using in Linux OS userspace)
+int ml_kem_entropy(void *buf, size_t len)
+{
+	ssize_t ret = 0;
+	size_t offset = 0;
+	while(offset < ML_KEM_SEED_BYTES)
+	{
+		ret = getrandom((u8 *)buf + offset, len - offset, 0);
+		if(ret < 0) 
+		{
+			if(errno == EINTR) { continue; }
+			return -1;
+		}
+		offset += ret;
+	}
+	return 0;
+}
+
 // Secure memory wipe function.
 //
 // Uses a volatile pointer to prevent compiler optimizations

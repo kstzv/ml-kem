@@ -56,14 +56,14 @@ int main()
 {
 	// Create keys
 	struct ml_kem_pool_decaps_ctx  *ctx_keys;
-	ctx_keys = ml_kem_create_object(ML_KEM_512, NUMBER_THREADS);
+	ctx_keys = ml_kem_create_object(ML_KEM_512, NUMBER_THREADS, NULL);
 	if(!ctx_keys) { printf("Error in ml_kem_create_object()\n"); return -1; }
 	
 	// Create ciphertexts
 	u8 *temp_ciphertext;
 	for(size_t i = 0; i < NUMBER_ITERATIONS; i++)
 	{
-		temp_ciphertext = ml_kem_encaps_core(ctx_keys->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ML_KEM_512, shared_secrets[i]);
+		temp_ciphertext = ml_kem_encaps_core(ctx_keys->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ML_KEM_512, shared_secrets[i], NULL);
 		if(!temp_ciphertext) { printf("Error in ml_kem_encaps_core()\n"); ml_kem_destroy_core(ctx_keys); return -1; }
 		
 		memcpy(ciphertexts[i], temp_ciphertext, LEN_CIPHERTEXT_512);

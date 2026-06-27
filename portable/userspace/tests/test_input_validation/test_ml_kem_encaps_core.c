@@ -24,21 +24,21 @@ int main(void)
 		struct ml_kem_pool_decaps_ctx *ctx_768;
 		struct ml_kem_pool_decaps_ctx *ctx_1024;
 
-		ctx_512 = ml_kem_create_object(ML_KEM_512, 2);
+		ctx_512 = ml_kem_create_object(ML_KEM_512, 2, NULL);
 		if(ctx_512 == NULL)
 		{
 			printf("Error: create ML_KEM_512\n");
 			return -1;
 		}
 
-		ctx_768 = ml_kem_create_object(ML_KEM_768, 2);
+		ctx_768 = ml_kem_create_object(ML_KEM_768, 2, NULL);
 		if(ctx_768 == NULL)
 		{
 			printf("Error: create ML_KEM_768\n");
 			return -1;
 		}
 
-		ctx_1024 = ml_kem_create_object(ML_KEM_1024, 2);
+		ctx_1024 = ml_kem_create_object(ML_KEM_1024, 2, NULL);
 		if(ctx_1024 == NULL)
 		{
 			printf("Error: create ML_KEM_1024\n");
@@ -53,11 +53,7 @@ int main(void)
 		u8 *ct_768;
 		u8 *ct_1024;
 
-		ct_512 = ml_kem_encaps_core(
-			ctx_512->ml_kem_pool[0].encaps_ctx->public_key_msg,
-			ML_KEM_512,
-			result_512
-		);
+		ct_512 = ml_kem_encaps_core(ctx_512->ml_kem_pool[0].encaps_ctx->public_key_msg, ML_KEM_512, result_512, NULL);
 
 		if(ct_512 == NULL)
 		{
@@ -65,11 +61,7 @@ int main(void)
 			return -1;
 		}
 
-		ct_768 = ml_kem_encaps_core(
-			ctx_768->ml_kem_pool[0].encaps_ctx->public_key_msg,
-			ML_KEM_768,
-			result_768
-		);
+		ct_768 = ml_kem_encaps_core(ctx_768->ml_kem_pool[0].encaps_ctx->public_key_msg, ML_KEM_768, result_768, NULL);
 
 		if(ct_768 == NULL)
 		{
@@ -77,11 +69,7 @@ int main(void)
 			return -1;
 		}
 
-		ct_1024 = ml_kem_encaps_core(
-			ctx_1024->ml_kem_pool[0].encaps_ctx->public_key_msg,
-			ML_KEM_1024,
-			result_1024
-		);
+		ct_1024 = ml_kem_encaps_core(ctx_1024->ml_kem_pool[0].encaps_ctx->public_key_msg, ML_KEM_1024, result_1024, NULL);
 
 		if(ct_1024 == NULL)
 		{
@@ -96,11 +84,7 @@ int main(void)
 		u8 *wrong_ct;
 
 		// NULL public key
-		wrong_ct = ml_kem_encaps_core(
-			NULL,
-			ML_KEM_768,
-			result_768
-		);
+		wrong_ct = ml_kem_encaps_core(NULL, ML_KEM_768, result_768, NULL);
 
 		if(wrong_ct != NULL)
 		{
@@ -109,11 +93,7 @@ int main(void)
 		}
 
 		// NULL result buffer
-		wrong_ct = ml_kem_encaps_core(
-			ctx_768->ml_kem_pool[0].encaps_ctx->public_key_msg,
-			ML_KEM_768,
-			NULL
-		);
+		wrong_ct = ml_kem_encaps_core(ctx_768->ml_kem_pool[0].encaps_ctx->public_key_msg, ML_KEM_768, NULL, NULL);
 
 		if(wrong_ct != NULL)
 		{
@@ -122,11 +102,7 @@ int main(void)
 		}
 
 		// Invalid level
-		wrong_ct = ml_kem_encaps_core(
-			ctx_768->ml_kem_pool[0].encaps_ctx->public_key_msg,
-			999,
-			result_768
-		);
+		wrong_ct = ml_kem_encaps_core(ctx_768->ml_kem_pool[0].encaps_ctx->public_key_msg, 999, result_768, NULL);
 
 		if(wrong_ct != NULL)
 		{

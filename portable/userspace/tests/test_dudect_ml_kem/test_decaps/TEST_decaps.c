@@ -75,7 +75,7 @@ static volatile u8 dudect_sink = 0;
 // Initialization                                                    
 static void init_ctx(void)
 {
-	pool_head = ml_kem_create_object(LVL, 1);
+	pool_head = ml_kem_create_object(LVL, 1, NULL);
 
      // Fixed non-zero values. These are NOT dudect classes
     randombytes(ciphertext_reference, sizeof(ciphertext_reference));

@@ -17,13 +17,13 @@ int main(void)
     struct ml_kem_pool_decaps_ctx *ctx_768;
     struct ml_kem_pool_decaps_ctx *ctx_1024;
     
-    ctx_512 = ml_kem_create_object(ML_KEM_512, SIZE_POOL);
+    ctx_512 = ml_kem_create_object(ML_KEM_512, SIZE_POOL, NULL);
     if(!ctx_512) { printf("Error in ml_kem_create_object() for ML_KEM_512\n"); return -1; }
     
-    ctx_768 = ml_kem_create_object(ML_KEM_768, SIZE_POOL);
+    ctx_768 = ml_kem_create_object(ML_KEM_768, SIZE_POOL, NULL);
     if(!ctx_768) { printf("Error in ml_kem_create_object() for ML_KEM_768\n"); return -1; }
     
-    ctx_1024 = ml_kem_create_object(ML_KEM_1024, SIZE_POOL);
+    ctx_1024 = ml_kem_create_object(ML_KEM_1024, SIZE_POOL, NULL);
     if(!ctx_1024) { printf("Error in ml_kem_create_object() for ML_KEM_1024\n"); return -1; }
     
     u8 result[32];
@@ -34,7 +34,7 @@ int main(void)
     {
 		u8 *ciphertext;
 		
-		ciphertext = ml_kem_encaps_core(ctx_512->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ML_KEM_512, result);
+		ciphertext = ml_kem_encaps_core(ctx_512->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ML_KEM_512, result, NULL);
 		if(!ciphertext) { printf("Error in ml_kem_encaps_core() for ML_KEM_512\n"); return -1; }
 		
 		ret = ml_kem_decaps_core(ctx_512, ciphertext, LEN_CIPHERTEXT_512, result, 32);
@@ -69,7 +69,7 @@ int main(void)
     {
 		u8 *ciphertext;
 		
-		ciphertext = ml_kem_encaps_core(ctx_768->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ML_KEM_768, result);
+		ciphertext = ml_kem_encaps_core(ctx_768->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ML_KEM_768, result, NULL);
 		if(!ciphertext) { printf("Error in ml_kem_encaps_core() for ML_KEM_768\n"); return -1; }
 		
 		ret = ml_kem_decaps_core(ctx_768, ciphertext, LEN_CIPHERTEXT_768, result, 32);
@@ -104,7 +104,7 @@ int main(void)
     {
 		u8 *ciphertext;
 		
-		ciphertext = ml_kem_encaps_core(ctx_1024->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ML_KEM_1024, result);
+		ciphertext = ml_kem_encaps_core(ctx_1024->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ML_KEM_1024, result, NULL);
 		if(!ciphertext) { printf("Error in ml_kem_encaps_core() for ML_KEM_1024\n"); return -1; }
 		
 		ret = ml_kem_decaps_core(ctx_1024, ciphertext, LEN_CIPHERTEXT_1024, result, 32);

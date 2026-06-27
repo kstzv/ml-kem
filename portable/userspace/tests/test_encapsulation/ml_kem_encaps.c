@@ -12,7 +12,7 @@
 struct ml_kem_encaps_ctx *ml_kem_alloc_encaps(u8 *public_key_msg, enum ml_kem_k k);
 void ml_kem_wipe_encaps(struct ml_kem_encaps_ctx *ctx);
 void ml_kem_destroy_encaps(struct ml_kem_encaps_ctx *ctx);
-void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk);
+void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, ml_kem_entropy_fn entropy);
 void ml_kem_unpack_pk_t_u16(struct ml_kem_encaps_ctx *ctx);
 
 // Internal (file-local) helper functions
@@ -176,8 +176,9 @@ void ml_kem_destroy_encaps(struct ml_kem_encaps_ctx *ctx)
 // Usage model:
 //  - Client side: msg == NULL and hash_pk == NULL → generate fresh randomness
 //  - Server side (during decapsulation): both msg and hash_pk must be provided
+//  - entropy parameter - callback used to obtain cryptographically secure random bytes. NULL if using the operating system's random data source
 // NOTE: msg and hash_pk must either both be valid or both be NULL.
-void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk)
+void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, ml_kem_entropy_fn entropy)
 {
 	// Validate consistency of (msg, hash_pk) pair:
 	// either both provided (decapsulation flow) or both NULL (encapsulation flow)
@@ -204,17 +205,12 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk)
 	{
 		// Client-side path:
 		// generate fresh random m and compute H(pk)
-		
-		size_t offset = 0;
-		ssize_t ret = 0;
-		ssize_t len = ML_KEM_SEED_BYTES;
-
-		// Fill m with secure randomness (getrandom)
-		while(offset < ML_KEM_SEED_BYTES)
+		if(entropy == NULL)
 		{
-			ret = getrandom(first_seed_encaps + offset, len - offset, 0);
-			if(errno == EINTR) { continue; }
-			offset += ret;
+			if(ml_kem_entropy(first_seed_encaps, ML_KEM_SEED_BYTES) != 0) { return; }
+		}else
+		{
+			if(entropy(first_seed_encaps, ML_KEM_SEED_BYTES) != 0) { return; }
 		}
 
 		memcpy(ctx->seed_m, first_seed_encaps, ML_KEM_SEED_BYTES);

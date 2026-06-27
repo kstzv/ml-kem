@@ -17,8 +17,8 @@
 #define ML_KEM_N                      256  // Polynomial degree
 #define ML_KEM_COEFF_NORMALIZATION    3303 // Normalization constant used after polynomial coefficient reduction (per ML-KEM requirements)
 
-#define ML_KEM_SEED_BYTES 32  	// Seed size for matrix A, noise generation, and secret vector (all use 32 bytes)
-#define ML_KEM_MSG_COEFF 1665  // (Q + 1) / 2, used for bit-to-polynomial encoding of message bits (FIPS-203 Encode(m))
+#define ML_KEM_SEED_BYTES 32  					 // Seed size for matrix A, noise generation, and secret vector (all use 32 bytes)
+#define ML_KEM_MSG_COEFF 1665  					 // (Q + 1) / 2, used for bit-to-polynomial encoding of message bits (FIPS-203 Encode(m))
 #define ML_KEM_Q_RECIP_48 ((u64)0x13AFB7680Bull) // Precomputed reciprocal for fast modular operations (48-bit domain)
 
 // Compression-related constants
@@ -61,6 +61,14 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 typedef int32_t s32;
 
+// Callback used to obtain cryptographically secure random bytes.
+// Parameters:
+//   buf - destination buffer
+//   len - number of bytes to generate
+// Returns:
+//   0 on success
+//   non-zero on failure
+typedef int (*ml_kem_entropy_fn)(void *buf, size_t len);
 
 // ML-KEM security level parameter k:
 // Defines matrix/vector dimensions:
@@ -153,11 +161,12 @@ struct ml_kem_pool_decaps_ctx {
 };
 
 // Key generation API (File #2)
-extern int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx);
+extern int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx, ml_kem_entropy_fn entropy);
 extern struct ml_kem_temp *ml_kem_temp_alloc(enum ml_kem_k level);
 extern struct ml_kem_ctx *ml_kem_ctx_alloc(enum ml_kem_k level);
 extern void ml_kem_destroy_temp_struct(struct ml_kem_temp *temp);
 extern void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx);
+extern int ml_kem_entropy(void *buf, size_t len);
 
 // Secure memory wipe (File #2)
 extern void ml_kem_memzero(void *ptr, size_t len);
@@ -166,7 +175,7 @@ extern void ml_kem_memzero(void *ptr, size_t len);
 extern struct ml_kem_encaps_ctx *ml_kem_alloc_encaps(u8 *public_key_msg, enum ml_kem_k k);
 extern void ml_kem_wipe_encaps(struct ml_kem_encaps_ctx *ctx);
 extern void ml_kem_destroy_encaps(struct ml_kem_encaps_ctx *ctx);
-extern void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk);
+extern void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, ml_kem_entropy_fn entropy);
 extern void ml_kem_unpack_pk_t_u16(struct ml_kem_encaps_ctx *ctx);
 
 // Decryption API (File #4)

@@ -108,7 +108,7 @@ int main()
 			
 			// Create ML-KEM context (includes key generation internally).
 			struct ml_kem_pool_decaps_ctx *this_ctx;
-			this_ctx = ml_kem_create_object(k, NUMBER_SLOTS);
+			this_ctx = ml_kem_create_object(k, NUMBER_SLOTS, NULL);
 			
 			// Compare generated public key with NIST reference. Full byte-wise comparison ensures deterministic correctness.
 			if(memcmp(mass_ek, this_ctx->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, size_ek_counter) != 0)

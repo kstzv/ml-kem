@@ -75,7 +75,7 @@ int main(void)
     pthread_barrier_init(&barrier, NULL, THREADS);
 
 	// Create decapsulation pool. Pool size is intentionally smaller than thread count to induce heavy contention
-    struct ml_kem_pool_decaps_ctx *pool = ml_kem_create_object(level, pool_size);
+    struct ml_kem_pool_decaps_ctx *pool = ml_kem_create_object(level, pool_size, NULL);
 
     if (!pool) {
         printf("Pool creation failed\n");
@@ -86,7 +86,7 @@ int main(void)
 	// Generate a valid ciphertext and corresponding shared secret. This single ciphertext is reused by all threads to isolate
 	// Concurrency effects from input variability
     u8 shared_secret[ML_KEM_SEED_BYTES];
-    u8 *ciphertext = ml_kem_encaps_core(pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, level, shared_secret);
+    u8 *ciphertext = ml_kem_encaps_core(pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, level, shared_secret, NULL);
 
     if (!ciphertext) {
         printf("Encaps failed\n");

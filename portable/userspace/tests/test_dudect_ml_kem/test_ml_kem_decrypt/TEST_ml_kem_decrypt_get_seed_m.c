@@ -58,7 +58,7 @@ void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry);
 // Create all needes struct and datas
 static int init_ctx(void)
 {
-	ctx = ml_kem_create_object(LEVEL, 1);
+	ctx = ml_kem_create_object(LEVEL, 1, NULL);
 	if(!ctx) 
 	{
 		printf("Error in ml_kem_create_object()\n");

@@ -116,11 +116,11 @@ int main()
 			
 			// Create ML-KEM context with decapsulation pool
 			struct ml_kem_pool_decaps_ctx *this_ctx;
-			this_ctx = ml_kem_create_object(k, NUMBER_SLOTS);
+			this_ctx = ml_kem_create_object(k, NUMBER_SLOTS, NULL);
 			
 			// Perform encapsulation using public key from generated context. Result: ciphertext and shared secret (mass_K_encaps)
 			u8 *ciphertext;
-			ciphertext = ml_kem_encaps_core(this_ctx->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, k, mass_K_encaps);
+			ciphertext = ml_kem_encaps_core(this_ctx->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, k, mass_K_encaps, NULL);
 			if(ciphertext == NULL) { return -1; }
 			
 			// Perform decapsulation: derive shared secret from ciphertext using private key

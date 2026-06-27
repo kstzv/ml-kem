@@ -38,12 +38,12 @@ int main()
 		
 		// create pool and keys
 		struct ml_kem_pool_decaps_ctx *ctx_key; 
-		ctx_key = ml_kem_create_object(CURR_LVL, 1);
+		ctx_key = ml_kem_create_object(CURR_LVL, 1, NULL);
 		if(!ctx_key) { printf("ml_kem_create_object() failed at iteration %zu\n", i); return -1; }
 		
 		// encapsulation - get first shared secret
 		u8 *ciphertext;
-		ciphertext = ml_kem_encaps_core(ctx_key->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, CURR_LVL, shared_secret_in_encaps);
+		ciphertext = ml_kem_encaps_core(ctx_key->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, CURR_LVL, shared_secret_in_encaps, NULL);
 		if(!ciphertext) 
 		{ 
 			ml_kem_destroy_core(ctx_key);
