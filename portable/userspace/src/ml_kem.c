@@ -13,7 +13,7 @@ void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
 int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 
 // Forward declarations of local function in this module
-static void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
 
 // Full initialization routine:
 //  - Generates ML-KEM keypair
@@ -260,7 +260,7 @@ int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size
 }
 
 // Function to check the coincidence of ciphertexts after decrypt and re-encaps	
-static void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot)
+STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot)
 {
 	// Step 3: Precompute fallback shared secret (z || c) → SHAKE256
 	// Used if ciphertext verification fails (CCA security requirement)

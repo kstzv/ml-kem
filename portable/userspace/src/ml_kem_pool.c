@@ -13,9 +13,9 @@ void ml_kem_pool_destroy(struct ml_kem_pool_decaps_ctx *head_pool);
 bool try_acquire_slot(atomic_int *is_free);
 
 // Static (internal) helpers
-static struct ml_kem_pool_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count);
-static u16 *ml_kem_get_mem_two_bytes_ptrs_encaps(struct ml_kem_encaps_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level);
-static u16 *ml_kem_get_mem_two_bytes_ptrs_decrypt(struct ml_kem_decrypt_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level);
+STATIC struct ml_kem_pool_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count);
+STATIC u16 *ml_kem_get_mem_two_bytes_ptrs_encaps(struct ml_kem_encaps_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level);
+STATIC u16 *ml_kem_get_mem_two_bytes_ptrs_decrypt(struct ml_kem_decrypt_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level);
 
 // Allocate and initialize the entire decapsulation pool.
 // This is the main entry point that prepares all memory required for parallel decapsulation.
@@ -158,7 +158,7 @@ struct ml_kem_pool_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, siz
 // - All buffers are taken from a single contiguous block to improve locality and reduce allocations
 // - Pointer arithmetic must strictly match the ML-KEM structure layout
 // - The function returns the updated pointer for further allocation chaining
-static u16 *ml_kem_get_mem_two_bytes_ptrs_encaps(struct ml_kem_encaps_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level)
+STATIC u16 *ml_kem_get_mem_two_bytes_ptrs_encaps(struct ml_kem_encaps_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level)
 {
 	// public_key: unpacked t vector (k polynomials)
 	ctx->public_key = two_bytes_ptrs;
@@ -196,7 +196,7 @@ static u16 *ml_kem_get_mem_two_bytes_ptrs_encaps(struct ml_kem_encaps_ctx *ctx, 
 // - Uses the same shared linear buffer as encapsulation contexts
 // - Designed to minimize memory footprint for decapsulation
 // - Must stay consistent with how ciphertext is unpacked and processed
-static u16 *ml_kem_get_mem_two_bytes_ptrs_decrypt(struct ml_kem_decrypt_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level)
+STATIC u16 *ml_kem_get_mem_two_bytes_ptrs_decrypt(struct ml_kem_decrypt_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level)
 {
 	// u: vector of k polynomials extracted from ciphertext
 	ctx->u = two_bytes_ptrs;
@@ -217,7 +217,7 @@ static u16 *ml_kem_get_mem_two_bytes_ptrs_decrypt(struct ml_kem_decrypt_ctx *ctx
 // Allocate and initialize the pool head structure along with slot descriptors.
 // This function only allocates the "skeleton" of the pool (no heavy buffers yet).
 // All large memory regions are assigned later in ml_kem_alloc_decaps_pool().
-static struct ml_kem_pool_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count)
+STATIC struct ml_kem_pool_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count)
 {
 	// Allocate pool head structure
 	struct ml_kem_pool_decaps_ctx *head_pool;

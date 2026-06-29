@@ -12,12 +12,12 @@ void ml_kem_wipe_decrypt(struct ml_kem_decrypt_ctx *ctx_decry);
 void ml_kem_decrypt(struct ml_kem_decrypt_ctx *ctx_decry, u8 *ciphertext);
 
 // Internal (static) helpers
-static void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry);
-static void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry);
-static inline u8 ml_kem_decode1_bit(u16 w);
-static inline u16 ml_kem_decompress_one_coeff(u16 y, u8 d_u);
-static void ml_kem_decompress_one_poly(u16 *poly, u8 *compress_poly, const u8 d);
-static void ml_kem_decompress(struct ml_kem_decrypt_ctx *ctx);
+STATIC void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry);
+STATIC void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry);
+STATIC inline u8 ml_kem_decode1_bit(u16 w);
+STATIC inline u16 ml_kem_decompress_one_coeff(u16 y, u8 d_u);
+STATIC void ml_kem_decompress_one_poly(u16 *poly, u8 *compress_poly, const u8 d);
+STATIC void ml_kem_decompress(struct ml_kem_decrypt_ctx *ctx);
 
 // Secure wipe of decryption context
 void ml_kem_wipe_decrypt(struct ml_kem_decrypt_ctx *ctx_decry)
@@ -53,7 +53,7 @@ void ml_kem_decrypt(struct ml_kem_decrypt_ctx *ctx_decry, u8 *ciphertext)
 	
 // Compute resulting polynomial from ML-KEM decryption formula
 // Result: poly = v - sum(u_i * s_i)
-static void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry)
+STATIC void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry)
 {	
 	// Compute inner product <u, s> in NTT domain
 	for(size_t i = 0; i < ctx_decry->ctx->k; i++)
@@ -81,7 +81,7 @@ static void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry)
 }
 
 // Extract final 32-byte message seed (m) from decrypted polynomial
-static void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry)
+STATIC void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry)
 {
 	// Each coefficient encodes 1 bit → reconstruct 256-bit message
 	for (int i = 0; i < 256; i++) 
@@ -102,7 +102,7 @@ static void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry)
 //   This implementation relies on arithmetic to avoid branches,
 //   but constant-time behavior depends on compiler optimizations.
 //   May require future hardening (e.g., via assembly or verified CT pattern).
-static inline u8 ml_kem_decode1_bit(u16 w)
+STATIC inline u8 ml_kem_decode1_bit(u16 w)
 {
     u32 lo = (u32)w - 833u;
     u32 hi = 2496u - (u32)w;
@@ -118,7 +118,7 @@ static inline u8 ml_kem_decode1_bit(u16 w)
 
 // Decompression formula for a single coefficient
 // Maps d-bit compressed value back into Z_q domain
-static inline u16 ml_kem_decompress_one_coeff(u16 y, u8 d_u)
+STATIC inline u16 ml_kem_decompress_one_coeff(u16 y, u8 d_u)
 {
     return (y * ML_KEM_Q + (1U << (d_u - 1))) >> d_u;
 }
@@ -133,7 +133,7 @@ static inline u16 ml_kem_decompress_one_coeff(u16 y, u8 d_u)
 //   - Uses a bit-buffer to extract d-bit values
 //   - Ensures no bit loss across byte boundaries
 //   - Mask is preselected for valid d values (4,5,10,11)
-static void ml_kem_decompress_one_poly(u16 *poly, u8 *compress_poly, const u8 d)
+STATIC void ml_kem_decompress_one_poly(u16 *poly, u8 *compress_poly, const u8 d)
 {
 	// Number of bits in one byte
 	const u8 bits_in_byte = 8;
@@ -154,6 +154,7 @@ static void ml_kem_decompress_one_poly(u16 *poly, u8 *compress_poly, const u8 d)
 		case 5:  mask = 0x001F; break;
 		case 10: mask = 0x03FF; break;
 		case 11: mask = 0x07FF; break;
+		default: return;
 	}
 
 	// Extract coefficients one by one
@@ -186,7 +187,7 @@ static void ml_kem_decompress_one_poly(u16 *poly, u8 *compress_poly, const u8 d)
 // Layout in ciphertext:
 //   [ u_0 | u_1 | ... | u_{k-1} | v ]
 // Compression parameters depend on security level
-static void ml_kem_decompress(struct ml_kem_decrypt_ctx *ctx_decry)
+STATIC void ml_kem_decompress(struct ml_kem_decrypt_ctx *ctx_decry)
 {
 	// Select compression parameters based on security level
 	u8 d_u, d_v;

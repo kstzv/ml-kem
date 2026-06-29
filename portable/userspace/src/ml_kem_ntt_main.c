@@ -8,7 +8,7 @@
 // All 128 twiddle factors used across the seven butterfly stages of the NTT transformation,
 // These values are strictly defined by the standard and specified on page 44
 #define HALF_NUMB_COEF_TWIDDLES 128
-static const u16 ml_kem_zetas[HALF_NUMB_COEF_TWIDDLES] = {
+STATIC const u16 ml_kem_zetas[HALF_NUMB_COEF_TWIDDLES] = {
 	1, 1729, 2580, 3289, 2642, 630, 1897, 848,
 	1062, 1919, 193, 797, 2786, 3260, 569, 1746,
 	296, 2447, 1339, 1476, 3046, 56, 2240, 1333,
@@ -29,7 +29,7 @@ static const u16 ml_kem_zetas[HALF_NUMB_COEF_TWIDDLES] = {
 
 // All 128 gamma values, special fixed constants required in a specific order for multiplication,
 // Taken from page 45 of the ML-KEM standard
-static const u16 ml_kem_gammas[HALF_NUMB_COEF_TWIDDLES] = {
+STATIC const u16 ml_kem_gammas[HALF_NUMB_COEF_TWIDDLES] = {
 	17, 3312, 2761, 568, 583, 2746, 2649, 680,
 	1637, 1692, 723, 2606, 2288, 1041, 1100, 2229,
 	1409, 1920, 2662, 667, 3281, 48, 233, 3096,

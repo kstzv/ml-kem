@@ -25,13 +25,13 @@
 #define K_STEP 1
 
 // Buffers for test vectors: 
-// mass_m  - input message (seed for encapsulation)
+// mass_d  - input message (seed for encapsulation)
 // mass_k  - expected shared secret (reference)
 // mass_ek - public key
 // mass_c  - expected ciphertext
 // mass_k_from_encaps - output shared secret from implementation
 
-u8 mass_m[ML_KEM_SEED_BYTES];
+u8 mass_d[ML_KEM_SEED_BYTES];
 u8 mass_k[ML_KEM_SEED_BYTES];
 u8 mass_ek[RES_PUBL_PART_LVL_1024];
 u8 mass_c[LEN_CIPHERTEXT_1024];
@@ -62,7 +62,7 @@ int main()
 	// Prevents residual data from affecting test correctness.
 	for(size_t i = 0; i < ML_KEM_SEED_BYTES; i++)
 	{
-		mass_m[i] = 0;
+		mass_d[i] = 0;
 	}
 	
 	for(size_t i = 0; i < ML_KEM_SEED_BYTES; i++)
@@ -139,7 +139,7 @@ int main()
 			if(ret != ML_KEM_SEED_BYTES) { return -1; }
 		}else if(strstr(buffer, "\"m\": \"")) // Read seed for encaps 'm'
 		{
-			size_t ret = read_hex_byte(buffer, mass_m, ML_KEM_SEED_BYTES);
+			size_t ret = read_hex_byte(buffer, mass_d, ML_KEM_SEED_BYTES);
 			if(ret != ML_KEM_SEED_BYTES) { return -1; }
 			
 			// Perform encapsulation: input: public key + message seed

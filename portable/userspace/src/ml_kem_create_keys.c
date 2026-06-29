@@ -22,11 +22,11 @@ int ml_kem_entropy(void *buf, size_t len);
 void ml_kem_memzero(void *ptr, size_t len);
 
 // Internal (static) helpers
-static int ml_kem_generation_entropy(struct ml_kem_temp *temp,  ml_kem_entropy_fn entropy);
-static void ml_kem_create_vector_poly(struct ml_kem_temp *temp);
-static int ml_kem_create_public_key(struct ml_kem_temp *temp);
-static void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx);
-static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx,  ml_kem_entropy_fn entropy);
+STATIC int ml_kem_generation_entropy(struct ml_kem_temp *temp,  ml_kem_entropy_fn entropy);
+STATIC void ml_kem_create_vector_poly(struct ml_kem_temp *temp);
+STATIC int ml_kem_create_public_key(struct ml_kem_temp *temp);
+STATIC void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx);
+STATIC int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx,  ml_kem_entropy_fn entropy);
 
 
 // Main key generation routine.
@@ -264,12 +264,18 @@ void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx)
 // Generate initial entropy and derive seed_rho / seed_sigma.
 // FIPS 203-compatible approach: sample 32 random bytes, append parameter k,
 // Then expand with SHA3-512 into two independent 32-byte seeds.
-static int ml_kem_generation_entropy(struct ml_kem_temp *temp, ml_kem_entropy_fn entropy)
+STATIC int ml_kem_generation_entropy(struct ml_kem_temp *temp, ml_kem_entropy_fn entropy)
 {
 	u8 first_seed[ML_KEM_SEED_BYTES + 1];          // 32-byte random seed || 1-byte parameter k
     u8 seeds_rho_and_sigma[ML_KEM_SEED_BYTES * 2]; // 64-byte SHA3-512 output: rho || sigma
     
-    // Read 32 bytes of system entropy
+#ifdef ML_KEM_TEST // copy value for test
+
+	(void)entropy;
+	memcpy(first_seed, mass_d, ML_KEM_SEED_BYTES);
+	
+#else             // Read 32 bytes of system entropy
+    
     if(entropy == NULL)
     {
 		if(ml_kem_entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -1; }
@@ -277,6 +283,8 @@ static int ml_kem_generation_entropy(struct ml_kem_temp *temp, ml_kem_entropy_fn
 	{
 		if(entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -1; }
 	}
+
+#endif
 	
 	// Append ML-KEM parameter k (matrix/vector dimension)
 	first_seed[32] = (u8)temp->k;
@@ -302,7 +310,7 @@ static int ml_kem_generation_entropy(struct ml_kem_temp *temp, ml_kem_entropy_fn
 //   3. sample coefficients via CBD
 //   4. convert the polynomial to NTT domain
 // The resulting vector is stored in temp->secret.
-static void ml_kem_create_vector_poly(struct ml_kem_temp *temp)
+STATIC void ml_kem_create_vector_poly(struct ml_kem_temp *temp)
 {
 	// Local seed buffer: seed_sigma || 1-byte counter
 	u8 local_seed[ML_KEM_SEED_BYTES + 1];
@@ -330,7 +338,7 @@ static void ml_kem_create_vector_poly(struct ml_kem_temp *temp)
 }
 
 // Generate public key vector t = A * s + e (in NTT domain)
-static int ml_kem_create_public_key(struct ml_kem_temp *temp)
+STATIC int ml_kem_create_public_key(struct ml_kem_temp *temp)
 {
 	// Local seed for matrix A generation: seed_rho || col || row
 	u8 local_seed_matrix[ML_KEM_SEED_BYTES + 2];
@@ -406,7 +414,7 @@ static int ml_kem_create_public_key(struct ml_kem_temp *temp)
 
 // Serialize public key vector t into byte representation and copy all required data into ctx.
 // Each pair of 12-bit coefficients is packed into 3 bytes (little-endian bit layout).
-static void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx)
+STATIC void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx)
 {
 	// Byte array index and coefficient index
 	size_t mass_counter = 0;
@@ -459,7 +467,7 @@ static void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, st
 // Generate auxiliary values for decapsulation:
 //   - z    : random fallback secret
 //   - h_pk : hash of serialized public key
-static int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx, ml_kem_entropy_fn entropy)
+STATIC int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx, ml_kem_entropy_fn entropy)
 {
 	// Fill z with 32 bytes of system entropy
 	if(entropy == NULL)

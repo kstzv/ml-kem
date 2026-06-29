@@ -22,7 +22,7 @@ struct ml_kem_sha3_ctx {
 void ml_kem_sha3_256(u8 out[32], const u8 *in, size_t inlen);
 void ml_kem_sha3_512(u8 out[64], const u8 *in, size_t inlen);
 
-static inline u64 ml_kem_sha3_load64_le(const u8 *src)
+STATIC inline u64 ml_kem_sha3_load64_le(const u8 *src)
 {
 	return ((u64)src[0]      ) |
 	       ((u64)src[1] <<  8) |
@@ -34,7 +34,7 @@ static inline u64 ml_kem_sha3_load64_le(const u8 *src)
 	       ((u64)src[7] << 56);
 }
 
-static inline void ml_kem_sha3_store64_le(u8 *dst, u64 x)
+STATIC inline void ml_kem_sha3_store64_le(u8 *dst, u64 x)
 {
 	dst[0] = (u8)(x);
 	dst[1] = (u8)(x >>  8);
@@ -46,13 +46,13 @@ static inline void ml_kem_sha3_store64_le(u8 *dst, u64 x)
 	dst[7] = (u8)(x >> 56);
 }
 
-static void ml_kem_sha3_init(struct ml_kem_sha3_ctx *ctx, size_t rate)
+STATIC void ml_kem_sha3_init(struct ml_kem_sha3_ctx *ctx, size_t rate)
 {
 	ml_kem_memzero(ctx, sizeof(*ctx));
 	ctx->rate = rate;
 }
 
-static void ml_kem_sha3_absorb(struct ml_kem_sha3_ctx *ctx, const u8 *in, size_t inlen)
+STATIC void ml_kem_sha3_absorb(struct ml_kem_sha3_ctx *ctx, const u8 *in, size_t inlen)
 {
 	size_t i;
 	const size_t rate = ctx->rate;
@@ -85,7 +85,7 @@ static void ml_kem_sha3_absorb(struct ml_kem_sha3_ctx *ctx, const u8 *in, size_t
 }
 
 // Apply SHA3 domain separation (0x06) and final padding
-static void ml_kem_sha3_finalize(struct ml_kem_sha3_ctx *ctx, u8 delim)
+STATIC void ml_kem_sha3_finalize(struct ml_kem_sha3_ctx *ctx, u8 delim)
 {
 	const size_t pos = ctx->pos;
 
@@ -96,7 +96,7 @@ static void ml_kem_sha3_finalize(struct ml_kem_sha3_ctx *ctx, u8 delim)
 	ctx->pos = 0;
 }
 
-static void ml_kem_sha3_squeeze(struct ml_kem_sha3_ctx *ctx, u8 *out, size_t outlen)
+STATIC void ml_kem_sha3_squeeze(struct ml_kem_sha3_ctx *ctx, u8 *out, size_t outlen)
 {
 	while (outlen > 0) {
 		if (ctx->pos == ctx->rate) {

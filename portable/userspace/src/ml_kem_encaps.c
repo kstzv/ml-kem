@@ -16,12 +16,12 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
 void ml_kem_unpack_pk_t_u16(struct ml_kem_encaps_ctx *ctx);
 
 // Internal (file-local) helper functions
-static void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed);
-static int  ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed);
-static void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed);
-static void ml_kem_compress_ciphertext(struct ml_kem_encaps_ctx *ctx);
-static inline u16 ml_kem_compress(u16 x, u8 d);
-static void ml_kem_compress_and_pack(u8 *out, const u16 *coeffs, size_t n, u8 d);
+STATIC void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed);
+STATIC int  ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed);
+STATIC void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed);
+STATIC void ml_kem_compress_ciphertext(struct ml_kem_encaps_ctx *ctx);
+STATIC inline u16 ml_kem_compress(u16 x, u8 d);
+STATIC void ml_kem_compress_and_pack(u8 *out, const u16 *coeffs, size_t n, u8 d);
 
 // Allocate and initialize encapsulation context.
 // This function prepares all buffers required for ML-KEM encapsulation,
@@ -202,6 +202,15 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
 	}
 	else
 	{
+		
+#ifdef ML_KEM_TEST // Copying seeds in the test version - from a global array into which seeds are read from a JSON file
+
+		(void)entropy;
+		memcpy(ctx->seed_m, mass_d, ML_KEM_SEED_BYTES);
+		memcpy(first_seed_encaps, mass_d, ML_KEM_SEED_BYTES);
+		
+#else             // Normal runtime
+
 		// Client-side path:
 		// generate fresh random m and compute H(pk)
 		if(entropy == NULL)
@@ -213,6 +222,8 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
 		}
 
 		memcpy(ctx->seed_m, first_seed_encaps, ML_KEM_SEED_BYTES);
+		
+#endif
 
 		// Compute H(pk)
 		ml_kem_sha3_256(first_seed_encaps + ML_KEM_SEED_BYTES, ctx->public_key_msg, ctx->public_key_msg_len);
@@ -286,7 +297,7 @@ void ml_kem_unpack_pk_t_u16(struct ml_kem_encaps_ctx *ctx)
 }
 
 // Generate ephemeral secret vector y (in NTT domain) from seed
-static void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed)
+STATIC void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 {
 	// Prepare internal seed: (seed || counter)
 	u8 inside_seed[ML_KEM_SEED_BYTES + 1];
@@ -328,7 +339,7 @@ static void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 		
 // Compute vector u during encapsulation:
 // u = A * y + e1
-static int ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed)
+STATIC int ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 {
 	// Prepare matrix seed (rho || i || j)
 	u8 local_seed_matrix[ML_KEM_SEED_BYTES + 2];
@@ -407,7 +418,7 @@ static int ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 
 // Compute value v during encapsulation:
 // v = t * y + e2 + m
-static void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed)
+STATIC void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 {
 	for(size_t i = 0; i < ctx->k; i++)
 	{
@@ -481,7 +492,7 @@ static void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 }
 
 // Compress and serialize ciphertext components (u, v)
-static void ml_kem_compress_ciphertext(struct ml_kem_encaps_ctx *ctx)
+STATIC void ml_kem_compress_ciphertext(struct ml_kem_encaps_ctx *ctx)
 {
 	u16 d_u, d_v;
 
@@ -516,7 +527,7 @@ static void ml_kem_compress_ciphertext(struct ml_kem_encaps_ctx *ctx)
 
 // ML-KEM coefficient compression function:
 // maps x ∈ [0, q) to d-bit representation
-static inline u16 ml_kem_compress(u16 x, u8 d)
+STATIC inline u16 ml_kem_compress(u16 x, u8 d)
 {
    // Scale value to d-bit range with rounding
    u32 num = ((u32)x << d) + ML_KEM_Q_HALF;
@@ -542,7 +553,7 @@ static inline u16 ml_kem_compress(u16 x, u8 d)
 //   - little-endian
 //   - tightly packed bitstream (no padding)
 //   - compliant with FIPS 203
-static void ml_kem_compress_and_pack(u8 *out, const u16 *coeffs, size_t n, u8 d)
+STATIC void ml_kem_compress_and_pack(u8 *out, const u16 *coeffs, size_t n, u8 d)
 {
     u32 acc = 0;      // bit accumulator
     u32 acc_bits = 0; // number of bits currently stored in accumulator

@@ -70,6 +70,24 @@ typedef int32_t s32;
 //   non-zero on failure
 typedef int (*ml_kem_entropy_fn)(void *buf, size_t len);
 
+// The massives for test
+#ifdef ML_KEM_TEST
+
+extern u8 mass_d[ML_KEM_SEED_BYTES];
+
+#endif
+
+// Remove static for dudect test
+#ifdef ML_KEM_DUDECT_TEST
+
+#define STATIC
+
+#else
+
+#define STATIC static
+
+#endif
+
 // ML-KEM security level parameter k:
 // Defines matrix/vector dimensions:
 //   k = 2 (ML_KEM_512)
@@ -381,4 +399,20 @@ static inline int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, 
 	return suma_bytes;
 }
 
-#endif /* ML_KEM_KYBER_H */
+#ifdef ML_KEM_DUDECT_TEST
+
+// INTERNAL FUNCTIONS EXPOSED FOR TESTING
+// The following functions are normally declared as `static` in their respective compilation units
+// They are exposed here ONLY for dudect-based constant-time analysis
+// WARNING: 1. Not part of the public API; 2. Not intended for external use;
+extern void ml_kem_create_vector_poly(struct ml_kem_temp *temp);                 // Status: tested.... file: ml_kem_create_keys.c
+extern void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed);// Status: tested.... file: ml_kem_encaps.c
+extern void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed);            // Status: tested.... file: ml_kem_encaps.c
+extern void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry);       // Status: tested.... file: ml_kem_decrypt.c
+extern void ml_kem_decrypt_get_seed_m(struct ml_kem_decrypt_ctx *ctx_decry);     // Status: tested.... file: ml_kem_decrypt.c
+extern u8 ml_kem_decode1_bit(u16 w);
+
+#endif // ML_KEM_DUDECT_TEST
+
+
+#endif // ML_KEM_KYBER_H

@@ -23,7 +23,7 @@ struct ml_kem_sponge {
 void ml_kem_shake128(u8 *out, size_t outlen, const u8 *in, size_t inlen);
 void ml_kem_shake256(u8 *out, size_t outlen, const u8 *in, size_t inlen);
 
-static inline u64 ml_kem_load64_le(const u8 *src)
+STATIC inline u64 ml_kem_load64_le(const u8 *src)
 {
 	return ((u64)src[0]      ) |
 	       ((u64)src[1] <<  8) |
@@ -35,7 +35,7 @@ static inline u64 ml_kem_load64_le(const u8 *src)
 	       ((u64)src[7] << 56);
 }
 
-static inline void ml_kem_store64_le(u8 *dst, u64 x)
+STATIC inline void ml_kem_store64_le(u8 *dst, u64 x)
 {
 	dst[0] = (u8)(x);
 	dst[1] = (u8)(x >>  8);
@@ -47,14 +47,14 @@ static inline void ml_kem_store64_le(u8 *dst, u64 x)
 	dst[7] = (u8)(x >> 56);
 }
 
-static void ml_kem_sponge_init(struct ml_kem_sponge *S, size_t rate, u8 delim)
+STATIC void ml_kem_sponge_init(struct ml_kem_sponge *S, size_t rate, u8 delim)
 {
 	memset(S, 0, sizeof(*S));
 	S->rate = rate;
 	S->delim = delim;
 }
 
-static void ml_kem_sponge_absorb(struct ml_kem_sponge *S, const u8 *in, size_t inlen)
+STATIC void ml_kem_sponge_absorb(struct ml_kem_sponge *S, const u8 *in, size_t inlen)
 {
 	size_t i;
 	const size_t rate = S->rate;
@@ -86,7 +86,7 @@ static void ml_kem_sponge_absorb(struct ml_kem_sponge *S, const u8 *in, size_t i
 	}
 }
 
-static void ml_kem_sponge_finalize(struct ml_kem_sponge *S)
+STATIC void ml_kem_sponge_finalize(struct ml_kem_sponge *S)
 {
 	const size_t pos = S->pos;
 
@@ -99,7 +99,7 @@ static void ml_kem_sponge_finalize(struct ml_kem_sponge *S)
 	S->squeezing = true;
 }
 
-static void ml_kem_sponge_squeeze(struct ml_kem_sponge *S, u8 *out, size_t outlen)
+STATIC void ml_kem_sponge_squeeze(struct ml_kem_sponge *S, u8 *out, size_t outlen)
 {
 	while (outlen > 0) {
 		if (S->pos == S->rate) {

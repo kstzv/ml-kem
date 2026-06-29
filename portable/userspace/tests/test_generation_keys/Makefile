@@ -1,10 +1,12 @@
 CC ?= gcc
 
 CFLAGS = -O3 -Wall -Wextra -std=c11 \
+		 -DML_KEM_TEST \
           -I. \
           -I../../src
 
-SRC_CORE = ml_kem_create_keys.c \
+SRC_CORE = \
+    ../../src/ml_kem_create_keys.c \
     ../../src/keccak1600.c \
     ../../src/ml_kem.c \
     ../../src/ml_kem_decrypt.c \
