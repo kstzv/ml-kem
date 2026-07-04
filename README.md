@@ -286,6 +286,6 @@ Feedback, reviews, and suggestions are welcome.
 
 ## 📬 Contact
 
-- GitHub: kstzv(https://github.com/kstzv)
+- GitHub: https://github.com/kstzv
 - Email: kstzavertaylo@gmail.com
 
