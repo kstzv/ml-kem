@@ -117,22 +117,13 @@ The goal is to explore performance improvements without compromising portability
 
 ## 🧱 Project Structure
 
-portable/
-├── src/
-│   └── Core portable ML-KEM implementation
-│
-├── benchmarks/
-│   └── Performance evaluation and implementation comparisons
-│
-├── tests/
-│   └── Functional, security and robustness tests
-│
-└── ports/
-    ├── userspace/
-    │   └── Linux userspace integration
-    │
-    └── linux_kernel/
-        └── Linux kernel integration
+- **portable/**
+  - **src/** — Core portable ML-KEM implementation
+  - **benchmarks/** — Performance evaluation and implementation comparisons
+  - **tests/** — Functional, security and robustness tests
+  - **ports/**
+    - **userspace/** — Linux userspace integration
+    - **linux_kernel/** — Linux kernel integration
 
 ---
 
