@@ -295,10 +295,9 @@ STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *
 	// Step 5: Constant-time selection of output key
 	//  - if valid: return K_bar
 	//  - if invalid: return fallback hash_z
-	for (size_t i = 0; i < ML_KEM_SEED_BYTES; i++) 
-	{
-		result[i] = (pool->ml_kem_pool[curr_slot].encaps_ctx->K_bar[i] & inv) | (hash_z[i] & mask);
-	}
+	for (size_t i = 0; i < 32; i++) { result[i] = (pool->ml_kem_pool[curr_slot].encaps_ctx->K_bar[i] & inv; }
+
+	for (size_t i = 0; i < 32; i++) { result[i] |= hash_z[i] & mask; }
 	
 	// Step 6: Wipe local buffers
 	ml_kem_memzero(hash_z, ML_KEM_SEED_BYTES);
