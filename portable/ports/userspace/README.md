@@ -64,7 +64,7 @@ The example Makefile is intended as a reference for integrating the library into
 
 The userspace port also provides installation support.
 
-To install the library and public headers into the system:
+To install the library and public headers into the system, you need to go to the /install directory:
 
     cd install
     sudo make install
