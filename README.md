@@ -8,6 +8,8 @@ This project focuses on correctness, transparency, architectural clarity and pre
 
 The implementation focuses on architectural clarity, portability, and explicit memory control.
 
+The project is organized as a portable implementation with environment-specific ports, allowing the same cryptographic core to be reused across different platforms.
+
 The design avoids external dependencies and introduces a custom decapsulation pool to reduce allocation overhead and improve performance in constrained or kernel environments.
 
 The implementation follows standard C semantics to simplify porting across different platforms, including userspace and Linux kernel.
@@ -15,7 +17,14 @@ The implementation follows standard C semantics to simplify porting across diffe
 ---
 
 ## ⚠️ Status
-Stable userspace release (v1.2.0)
+###Portable userspace implementation
+Stable (v1.3.0)
+
+###Performance userspace implementation
+Under active optimization
+
+###Linux kernel implementation
+Experimental
 
 ### Userspace implementation
 The userspace implementation is considered stable for tested x86-64 environments using GCC and Clang toolchains.
@@ -59,10 +68,7 @@ No formal third-party security audit has been performed.
 - Provide a **clean, readable implementation** of ML-KEM (FIPS 203)
 - Maintain **strict control over memory and data flow**
 - Avoid external dependencies (including crypto libraries)
-- Support both:
-  - Userspace
-  - Linux kernel environment
-- Serve as a **research and educational primary implementation of this project**
+- Enable straightforward porting across different execution environments
 
 ---
 
@@ -111,18 +117,22 @@ The goal is to explore performance improvements without compromising portability
 
 ## 🧱 Project Structure
 
-| File | Description |
-|------|------------|
-| `ml_kem.c` | Public API layer |
-| `ml_kem_core_header.h` | Core definitions, constants, and structures |
-| `ml_kem_create_keys.c` | Key generation |
-| `ml_kem_encaps.c` | Encapsulation logic |
-| `ml_kem_decrypt.c` | Decapsulation (decryption + re-encapsulation) |
-| `ml_kem_ntt_main.c` | NTT and polynomial operations |
-| `ml_kem_sha3.c` | SHA3-256 / SHA3-512 |
-| `ml_kem_shake.c` | SHAKE128 / SHAKE256 |
-| `keccak1600.c` | Keccak permutation |
-| `ml_kem_pool.c` | Decapsulation pool implementation |
+portable/
+├── src/
+│   └── Core portable ML-KEM implementation
+│
+├── benchmarks/
+│   └── Performance evaluation and implementation comparisons
+│
+├── tests/
+│   └── Functional, security and robustness tests
+│
+└── ports/
+    ├── userspace/
+    │   └── Linux userspace integration
+    │
+    └── linux_kernel/
+        └── Linux kernel integration
 
 ---
 
@@ -222,7 +232,11 @@ Detailed reproducible test setups and instructions are available in the `tests/`
 
 Reproducible benchmark procedures, throughput measurements, stack usage analysis, memory usage measurements and PQClean comparisons are documented in:
 
-     portable/userspace/benchmarks/README.md
+     portable/benchmarks/README.md
+     
+## Userspace Support
+
+For build instructions, API usage, and integration details, see: portable/ports/userspace/README.md
 
 ## 🐧 Kernel Support
 
@@ -236,7 +250,9 @@ Potential future directions include:
 - Embedded and resource-constrained environments
 - In-kernel cryptographic services
 - Evaluation of reusable workspace and memory-management strategies
-  
+
+More details in: portable/ports/linux_kernel/README.md
+
 ---
 
 ## ⚙️ Build and Usage
@@ -245,8 +261,8 @@ Build instructions, integration examples, API documentation and environment-spec
 
 Available documentation:
 
-- userspace/README.md — Linux userspace implementation
-- kernel/README.md — Linux kernel implementation
+- portable/ports/userspace/README.md — Linux userspace implementation
+- portable/ports/linux_kernel/README.md — Linux kernel implementation
 
 Please refer to the README file of the target environment before building or integrating the project.
 
