@@ -8,7 +8,7 @@
 // Cross-module function declarations
 struct ml_kem_pool_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, size_t ml_kem_pool_count, struct ml_kem_ctx *private_keys);
 void ml_kem_pool_destroy(struct ml_kem_pool_decaps_ctx *head_pool);
-bool try_acquire_slot(atomic_int *is_free);
+bool try_acquire_slot(ml_kem_atomic_t *is_free);
 
 // Static (internal) helpers
 STATIC struct ml_kem_pool_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count);

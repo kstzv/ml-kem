@@ -1,0 +1,10 @@
+config ML_KEM
+	tristate "ML-KEM (FIPS 203) support"
+	help
+	  Portable ISO C11 implementation of the ML-KEM key encapsulation
+	  mechanism (FIPS 203).
+
+	  This implementation provides reusable decapsulation pools intended
+	  for constrained and embedded environments.
+
+	  If unsure, say N.

@@ -1,5 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+// Copyright (c) 2026 K.S.Zavertailo
+
 #include "ml_kem_linux_kernel_port.h"
-#include <ml_kem_core_header.h>
+#include "ml_kem_core_header.h"
 
 // Memory allocations and free memory
 void *ml_kem_alloc(size_t size_alloc) { return kzalloc(size_alloc, GFP_KERNEL); }

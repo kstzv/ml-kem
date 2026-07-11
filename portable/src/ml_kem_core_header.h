@@ -24,7 +24,7 @@
 
 #elif defined(LINUX_KERNEL)
 
-#include <ml_kem_linux_kernel_port.h>
+#include "ml_kem_linux_kernel_port.h"
 
 #else
 #error "No ML-KEM port selected."
