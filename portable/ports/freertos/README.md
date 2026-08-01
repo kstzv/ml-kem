@@ -9,7 +9,7 @@ This FreeRTOS port was integrated and tested using the following reference confi
 - Nearest FreeRTOS release tag: `202212.00` 
 - FreeRTOS repository revision: `202212.00-323-g592732b4d`
 - Execution environment: QEMU system emulation
-- Host operating system used for testing: Void Linux
+- Host operating system used for testing: Linux
 - Toolchain: GNU Arm Embedded Toolchain (`arm-none-eabi-gcc`)
 - Build system: GNU Make
 - Emulator: `qemu-system-arm`
