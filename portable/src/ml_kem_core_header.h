@@ -170,7 +170,7 @@ struct ml_kem_encaps_ctx {
 	u8 *ciphertext;                   // Final ciphertext buffer
 	size_t ciphertext_len;            // Ciphertext length
 	u8 *raw_bytes;                    // XOF buffer for polynomial generation
-	signed char err;                  // Check errors in functions encapsulations
+	s16 err;                          // Check errors in functions encapsulations
 };
 
 // Decryption context (used during decapsulation)
