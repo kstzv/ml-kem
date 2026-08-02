@@ -30,6 +30,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 typedef int32_t s32;
+typedef int16_t s16;
 
 #include <ml_kem_core_header.h>
 // #include <ml_kem.h>
