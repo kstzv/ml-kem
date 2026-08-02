@@ -26,6 +26,10 @@
 
 #include "ml_kem_linux_kernel_port.h"
 
+#elif defined(FREERTOS)
+
+#include "ml_kem_freertos_port.h"
+
 #else
 #error "No ML-KEM port selected."
 #endif // HEADERS
