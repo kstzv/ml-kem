@@ -7,13 +7,13 @@
 #define ML_KEM_KYBER_H
 
 // Inside implementation error handling
-#define ML_KEM_EINVAL          		   1
-#define ML_KEM_ENOMEM        		   2
-#define ML_KEM_EBUSY          		   3
-#define ML_KEM_EAGAIN          		   4
-#define ML_KEM_SYSTEM_ENTROPY_FAILED   5
-#define ML_KEM_CALLBACK_ENTROPY_FAILED 6
-#define ML_KEM_ENCAPS_PARAM_ERR        7
+#define ML_KEM_EINVAL          		   22
+#define ML_KEM_ENOMEM        		   12
+#define ML_KEM_EBUSY          		   16
+#define ML_KEM_EAGAIN          		   11
+#define ML_KEM_SYSTEM_ENTROPY_FAILED   134
+#define ML_KEM_CALLBACK_ENTROPY_FAILED 135
+#define ML_KEM_ENCAPS_PARAM_ERR        136
 
 
 
