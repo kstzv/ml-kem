@@ -59,8 +59,11 @@ The Linux kernel port integrates the same portable ML-KEM core into the Linux ke
 Validated using:
 
 ✔ Successful kernel build
+
 ✔ Module load/unload testing
+
 ✔ Functional ML-KEM testing in kernel space
+
 ✔ Reuse of the common portable cryptographic core
 
 ### FreeRTOS port
@@ -107,30 +110,28 @@ No formal third-party security audit has been performed.
   - Encapsulation
   - Decapsulation
 - Memory pool for decapsulation contexts (lock-free with atomics)
-- Designed for portability (userspace + kernel)
+- Designed for portability across different execution environments
 
-## 🚀 Future Work
+## 🔧 Ongoing Work
 
-- Extended multi-architecture validation
-- Additional compiler and optimization-level testing
-- AF_ALG integration for Linux kernel testing
-- Kernel-space KAT validation
-- Extended kernel-space stress testing
-- Additional performance optimization passes
-- Fuzzing and long-term robustness testing
-- External security review and independent validation
-- Documentation improvements
+ - Extended multi-architecture and toolchain validation
+ - Additional compiler and optimization-level testing
+ - Performance and memory optimization
+ - Fuzzing and long-term robustness testing
+ - External security review and independent validation
+ - Documentation improvements
+ - Additional platform ports where useful
 
 ### 🔧 Hardware Acceleration (Exploration)
 
-Planned investigation of hardware-assisted acceleration paths, including:
+Potential future investigation of hardware-assisted acceleration paths includes:
 
-- Feasibility of integrating CPU-specific optimizations (e.g. SIMD, instruction sets)
-- Potential use of platform-provided cryptographic accelerators
-- Evaluation of abstraction layers for optional hardware backends
+- CPU-specific optimizations (e.g. SIMD and specialized instruction sets)
+- Platform-provided cryptographic accelerators
+- Optional hardware backend abstraction layers
 - Analysis of constant-time implications of hardware-assisted paths
 
-The goal is to explore performance improvements without compromising portability or introducing mandatory dependencies.
+Any hardware-specific optimization should preserve the portability of the cryptographic core and avoid introducing mandatory platform dependencies.
 
 ---
 
@@ -143,6 +144,7 @@ The goal is to explore performance improvements without compromising portability
   - **ports/**
     - **userspace/** — Linux userspace integration
     - **linux_kernel/** — Linux kernel integration
+    - **freertos/** - FreeRTOS integration
 
 ---
 
@@ -217,7 +219,6 @@ Implemented test categories include:
 - AddressSanitizer (ASAN)
 - ThreadSanitizer (TSAN)
 - Valgrind memory analysis
-- UndefinedBehaviorSanitizer (UBSAN)
 
 ### ✔ Robustness Testing
 - Invalid ciphertext handling tests
@@ -227,15 +228,16 @@ Implemented test categories include:
 ### ✔ Kernel Validation
 - Linux kernel module builds successfully
 - Kernel module load/unload validation
+- Functional testing of the ML-KEM implementation port in kernel space
+
+### ✔ FreeRTOS Validation
+- FreeRTOS integration and build validation
+- Functional ML-KEM testing under FreeRTOS
+- Repeated end-to-end key generation, encapsulation, and decapsulation testing
+- Reference testing on Arm Cortex-M3 under QEMU
 
 Detailed reproducible test setups and instructions are available in the `tests/` directory and its subdirectories.
 
-### Planned
-- AF_ALG-based kernel-space validation
-- Extended kernel-space stress testing
-- Additional multi-architecture testing
-- Additional fuzzing and robustness testing
-- Randomness quality analysis
 ---
 
 ## Performance Evaluation
@@ -244,37 +246,17 @@ Reproducible benchmark procedures, throughput measurements, stack usage analysis
 
      portable/benchmarks/README.md
      
-## Userspace Support
+## ⚙️ Platform Support
 
-For build instructions, API usage, and integration details, see: portable/ports/userspace/README.md
+Platform-specific integration, build instructions, and configuration details are documented in the corresponding port directories:
 
-## 🐧 Kernel Support
+- Linux userspace: portable/ports/userspace/README.md
+- Linux kernel: portable/ports/linux_kernel/README.md
+- FreeRTOS: portable/ports/freertos/README.md
 
-The repository includes an experimental Linux kernel integration prototype.
+For information about porting the implementation to a new environment, see:
 
-Current kernel-related work is primarily intended for architectural exploration and future integration with Linux kernel cryptographic infrastructure.
-
-Potential future directions include:
-
-- Integration with Linux crypto subsystems
-- Embedded and resource-constrained environments
-- In-kernel cryptographic services
-- Evaluation of reusable workspace and memory-management strategies
-
-More details in: portable/ports/linux_kernel/README.md
-
----
-
-## ⚙️ Build and Usage
-
-Build instructions, integration examples, API documentation and environment-specific notes are provided in the corresponding implementation directories.
-
-Available documentation:
-
-- portable/ports/userspace/README.md — Linux userspace implementation
-- portable/ports/linux_kernel/README.md — Linux kernel implementation
-
-Please refer to the README file of the target environment before building or integrating the project.
+- Porting guide: portable/ports/PORTING.pdf
 
 ---
 
