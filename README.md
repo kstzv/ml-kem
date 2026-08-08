@@ -12,53 +12,64 @@ The project is organized as a portable implementation with environment-specific 
 
 The design avoids external dependencies and introduces a custom decapsulation pool to reduce allocation overhead and improve performance in constrained or kernel environments.
 
-The implementation follows standard C semantics to simplify porting across different platforms, including userspace and Linux kernel.
+The implementation follows standard C semantics to simplify porting across different platforms.
 
 ---
 
 ## ⚠️ Status
-### Portable userspace implementation
-Stable (v1.3.0)
 
-### Performance userspace implementation
-Under active optimization
+### Portable core
 
-### Linux kernel implementation
-Experimental
+Stable (v1.4.0)
 
-### Userspace implementation
-The userspace implementation is considered stable for tested x86-64 environments using GCC and Clang toolchains.
+The portable ML-KEM core is shared across all supported environments and is the primary implementation maintained by the project.
+
+### Linux userspace port
+
+Stable
+
+The Linux userspace port is extensively tested and serves as the primary environment for comprehensive validation and performance benchmarking.
 
 Validated using:
-- ✔ NIST KAT tests (key generation & encapsulation)
-- ✔ End-to-end decapsulation validation
-- ✔ dudect constant-time leakage testing
-- ✔ Stress testing of decapsulation pool
-- ✔ Invalid ciphertext handling tests
-- ✔ Input validation and error-handling tests
-- ✔ ASAN / TSAN / Valgrind testing
-- ✔ Multi-million iteration stress tests
-- ✔ GCC and Clang testing
 
-### Linux kernel implementation
+✔ NIST KAT tests (key generation & encapsulation)
+✔ End-to-end decapsulation validation
+✔ dudect constant-time leakage testing
+✔ Stress testing of the decapsulation pool
+✔ Invalid ciphertext handling tests
+✔ Input validation and error-handling tests
+✔ ASAN / TSAN / UBSAN / Valgrind testing
+✔ Multi-million iteration stress tests
+✔ GCC and Clang testing
 
-The kernel implementation currently represents an earlier experimental integration effort and is not synchronized with the latest userspace implementation.
+### Linux kernel port
 
-Current status:
-- ✔ Builds successfully
-- ✔ Loads/unloads correctly
-- ✔ Demonstrates kernel-space integration of the ML-KEM core
-- ✔ Serves as a foundation for future Linux kernel work
+Tested
 
-Notes:
-- The current kernel code reflects an earlier development stage.
-- Future work is expected to target Linux kernel crypto infrastructure integration.
-- The userspace implementation is currently the primary development and validation target.
+The Linux kernel port integrates the same portable ML-KEM core into the Linux kernel environment through a platform-specific port layer.
+
+Validated using:
+
+✔ Successful kernel build
+✔ Module load/unload testing
+✔ Functional ML-KEM testing in kernel space
+✔ Reuse of the common portable cryptographic core
+
+### FreeRTOS port
+
+Tested
+
+The FreeRTOS port integrates the same portable ML-KEM core into an RTOS environment through a platform-specific port layer.
+
+The reference FreeRTOS configuration has been successfully built and tested using QEMU with repeated end-to-end ML-KEM operations.
+
+Detailed platform configurations and testing information are documented in the corresponding port directories.
 
 ### Notes
-This project is intended as a practical low-level ML-KEM implementation focused on tested x86-64 environments.
 
-Additional testing on other architectures and compilers is encouraged.
+The project provides a portable cryptographic core with tested integrations across userspace, kernel-space, and RTOS environments.
+
+Additional testing on other architectures, toolchains, and platforms is encouraged.
 
 No formal third-party security audit has been performed.
 ---
