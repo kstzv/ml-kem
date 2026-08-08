@@ -33,13 +33,21 @@ The Linux userspace port is extensively tested and serves as the primary environ
 Validated using:
 
 ✔ NIST KAT tests (key generation & encapsulation)
+
 ✔ End-to-end decapsulation validation
+
 ✔ dudect constant-time leakage testing
+
 ✔ Stress testing of the decapsulation pool
+
 ✔ Invalid ciphertext handling tests
+
 ✔ Input validation and error-handling tests
+
 ✔ ASAN / TSAN / UBSAN / Valgrind testing
+
 ✔ Multi-million iteration stress tests
+
 ✔ GCC and Clang testing
 
 ### Linux kernel port
