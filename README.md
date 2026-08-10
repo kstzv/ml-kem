@@ -44,7 +44,7 @@ Validated using:
 
 ✔ Input validation and error-handling tests
 
-✔ ASAN / TSAN / UBSAN / Valgrind testing
+✔ ASAN / TSAN / Valgrind testing
 
 ✔ Multi-million iteration stress tests
 
