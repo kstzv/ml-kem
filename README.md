@@ -16,6 +16,55 @@ The implementation follows standard C semantics to simplify porting across diffe
 
 ---
 
+## Architecture and Recommended Reading Order
+
+This implementation is organized primarily around the execution flow of ML-KEM and the explicit management of its memory resources, 
+rather than around individual mathematical objects such as polynomials and polynomial vectors.
+
+The recommended reading order is:
+
+1. Memory creation and resource management (ml_kem_pool.c). Begin with the creation and organization of the memory required by an ML-KEM key and its associated operations. 
+This module shows how reusable contexts and decapsulation slots are created, organized, acquired, and released. It defines the memory environment in which the main algorithmic phases execute.
+
+2. Key creation. Follow the generation of the public and private key material and observe how the previously created memory is divided and reused during the process.
+
+3. Encapsulation. Read the encapsulation procedure as a sequential transformation from the public key and fresh randomness to the ciphertext and shared secret. 
+The internal encapsulation functionality is also reused later as part of decapsulation.
+
+4. Decryption. Follow the internal decryption procedure separately. It recovers the candidate message from the ciphertext using the private key and provides 
+the intermediate result required by the complete decapsulation flow.
+
+5. Decapsulation in the public API. Complete decapsulation is assembled directly in the public API wrapper rather than implemented as another independent internal algorithmic module.
+The wrapper combines the existing internal decryption and encapsulation functions: it decrypts the received ciphertext, reuses the encapsulation logic to reconstruct the expected ciphertext, 
+performs the required verification and implicit rejection, and derives the final shared secret. 
+
+Reading decapsulation at the API level therefore shows how the existing internal phases are composed into the complete standardized operation, 
+while avoiding a duplicate implementation of encapsulation logic.
+
+These modules are intended to be read as sequential data flows. They explicitly control the placement, lifetime, ownership, reuse, and transformation of intermediate values.
+
+Lower-level modules provide reusable computational mechanisms invoked by the main execution phases:
+
+ - NTT and polynomial arithmetic
+
+ - SHA3 and SHAKE
+
+ - Keccak-f[1600]
+
+ - Modular arithmetic and reductions
+
+ - Sampling and centered binomial distribution
+
+For this reason, the implementation should generally be read from the resource-management layer into one of the high-level algorithmic phases, and then from input to output within that phase. 
+Lower-level modules should be consulted when they are invoked by the execution flow.
+
+This differs from implementations organized primarily around mathematical abstractions such as poly, polyvec, and indcpa. 
+Here, mathematical primitives are separated when they form substantial reusable computational mechanisms, while simpler operations remain visible within the phase in which they are performed.
+
+This organization is intentional. It supports explicit memory management, predictable data lifetimes, reusable operation contexts, bounded concurrency, reuse of complete internal phases, and direct inspection of the complete algorithmic flow.
+
+---
+
 ## ⚠️ Status
 
 ### Portable core
