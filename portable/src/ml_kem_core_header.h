@@ -229,7 +229,9 @@ struct ml_kem_pool_encaps_ctx {
     size_t ml_kem_pool_count_1024;
     
     // Allocated memory regions
-    // TODO .....
+    u16 *all_u16_mem_512;
+    u16 *all_u16_mem_768;
+    u16 *all_u16_mem_1024;
 };
 
 // Key generation API (File #2)
