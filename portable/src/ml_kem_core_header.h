@@ -213,6 +213,25 @@ struct ml_kem_pool_decaps_ctx {
 	struct ml_kem_encaps_ctx *encaps_mem_ptr;
 };
 
+// Single encapsulation slot
+struct ml_kem_encaps_slot {
+    struct ml_kem_encaps_ctx *encaps_ctx;
+    ml_kem_atomic_t is_free;
+};
+
+// Pool of encapsulation slots
+struct ml_kem_pool_encaps_ctx {
+	struct ml_kem_encaps_slot *ml_kem_pool_512;
+	struct ml_kem_encaps_slot *ml_kem_pool_768;
+	struct ml_kem_encaps_slot *ml_kem_pool_1024;
+    size_t ml_kem_pool_count_512;
+    size_t ml_kem_pool_count_768;
+    size_t ml_kem_pool_count_1024;
+    
+    // Allocated memory regions
+    // TODO .....
+};
+
 // Key generation API (File #2)
 extern int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx, ml_kem_entropy_fn entropy);
 extern struct ml_kem_temp *ml_kem_temp_alloc(enum ml_kem_k level);
