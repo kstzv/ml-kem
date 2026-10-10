@@ -100,6 +100,7 @@ void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool)
 	if(keys) { ml_kem_destroy_ctx_struct(keys); }
 }
 
+// Моя примітка:буде кардинально перероблено цю функцію
 // Encapsulation wrapper (client-side, one-shot API)
 // Parameters:
 //  pk     - public key in serialized byte format (as defined by ML-KEM spec)
@@ -161,6 +162,7 @@ u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result, ml_kem_entropy_f
 		return ciphertext;
 }
 
+// Моя примітка: скоріше за все ця функція буде вилучена 
 // Ciphertext destructor (client-side)
 // Parameters:
 //  ciphertext - buffer returned by ml_kem_encaps_core()
@@ -331,6 +333,7 @@ int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_pu
 	return 0;
 }
 
+// Моя примітка: створення пулу інкапсуляцій (в фінальному релізі буде додано ноармальнй опис в коментарях) 
 struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024)
 {
 	if(number_slots_512 == 0 && number_slots_768 == 0 && number_slots_1024 == 0) { return err_create_encaps_pool(-ML_KEM_EINVAL); }
@@ -383,6 +386,7 @@ struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_
 	return ctx;
 }
 
+// Моя примітка: деструктор пулу інкапсуляцій (в фінальному релізі буде додано ноармальнй опис в коментарях) 
 void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx)
 {
 	if(!ctx) { return; }
