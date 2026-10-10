@@ -121,7 +121,7 @@ struct ml_kem_pool_decaps_ctx *err_create_keys(const int err);
 u8 *err_encaps(const int err);
 int err_decaps(const int err);
 int err_get_pk(const int err);
-struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err);
+struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err); // Моя примітка: змінити тип обробки помилок цієї функції 
 
 // ML-KEM security level parameter k:
 // Defines matrix/vector dimensions:
