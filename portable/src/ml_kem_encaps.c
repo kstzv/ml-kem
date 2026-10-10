@@ -205,13 +205,13 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
 	else
 	{
 		
-#ifdef ML_KEM_TEST // Copying seeds in the test version - from a global array into which seeds are read from a JSON file
+		#ifdef ML_KEM_TEST // Copying seeds in the test version - from a global array into which seeds are read from a JSON file
 
 		(void)entropy;
 		memcpy(ctx->seed_m, mass_d, ML_KEM_SEED_BYTES);
 		memcpy(first_seed_encaps, mass_d, ML_KEM_SEED_BYTES);
 		
-#else             // Normal runtime
+		#else             // Normal runtime
 
 		// Client-side path:
 		// generate fresh random m and compute H(pk)
@@ -225,7 +225,7 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
 
 		memcpy(ctx->seed_m, first_seed_encaps, ML_KEM_SEED_BYTES);
 		
-#endif
+		#endif
 
 		// Compute H(pk)
 		ml_kem_sha3_256(first_seed_encaps + ML_KEM_SEED_BYTES, ctx->public_key_msg, ctx->public_key_msg_len);
