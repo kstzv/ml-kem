@@ -1,3 +1,18 @@
+> [!WARNING]
+> **UNDER ACTIVE REFACTORING — DEVELOPMENT VERSION IS UNSTABLE**
+>
+> This project is currently undergoing major refactoring.
+>
+> The current source code in the repository may contain
+> bugs, regressions, and incomplete functionality.
+>
+> **Do not use the current development branch.**
+> Instead, download and use one of the published
+> [Releases](../../releases).
+>
+> The development version is not recommended for
+> production use.
+
 # ML-KEM (FIPS 203) — Pure C Implementation
 
 A low-level implementation of the ML-KEM (Kyber) post-quantum key encapsulation mechanism, written in pure C.
