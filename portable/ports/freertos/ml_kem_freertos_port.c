@@ -93,5 +93,12 @@ u8 *err_encaps(const int err)
 // Error in decaps
 int err_decaps(const int err) { return err; }
 
-// Error in get oublic key
+// Error in get poublic key
 int err_get_pk(const int err) { return err; }
+
+// Error in create encaps pool
+struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err)
+{
+	(void)err;
+	return NULL;
+}
