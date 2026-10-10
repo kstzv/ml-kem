@@ -97,6 +97,10 @@ int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_pu
 // WARNING: 1. Not part of the public API; 2. Not intended for external use;
 void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
 
+struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
+
+void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
+
 #endif // ML_KEM_DUDECT_TEST
 
 #endif
