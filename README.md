@@ -7,11 +7,15 @@
 > bugs, regressions, and incomplete functionality.
 >
 > **Do not use the current development branch.**
-> Instead, download and use one of the published
-> [Releases](../../releases).
 >
-> The development version is not recommended for
-> production use.
+> **Security issue identified in published releases:**
+> Incomplete zeroization of sensitive cryptographic material
+> may leave residual secret data in memory.
+> The author is actively working on a fix, which is planned
+> for the next release.
+>
+> Until this issue is resolved, neither the development branch
+> nor the affected releases are recommended for production use.
 
 # ML-KEM (FIPS 203) — Pure C Implementation
 
