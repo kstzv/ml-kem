@@ -14,8 +14,8 @@
 > The author is actively working on a fix, which is planned
 > for the next release.
 >
-> Until this issue is resolved, neither the development branch
-> nor the affected releases are recommended for production use.
+> Until this issue is resolved, both the development branch
+and published releases should be used for research purposes only.
 
 # ML-KEM (FIPS 203) — Pure C Implementation
 
