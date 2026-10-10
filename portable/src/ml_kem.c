@@ -11,6 +11,7 @@ void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
 int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
 struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
+void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
 
 // Forward declarations of local function in this module
 STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
@@ -380,6 +381,76 @@ struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_
 	}
 	
 	return ctx;
+}
+
+void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx)
+{
+	if(!ctx) { return; }
+	
+	// Delete all 512 level mem
+	if(ctx->ml_kem_pool_512 && ctx->ml_kem_pool_512->encaps_ctx) 
+	{ 
+		ml_kem_memzero(ctx->ml_kem_pool_512->encaps_ctx, sizeof(struct ml_kem_encaps_ctx) * ctx->ml_kem_pool_count_512);
+		ml_kem_free(ctx->ml_kem_pool_512->encaps_ctx); 
+	}
+	
+	if(ctx->ml_kem_pool_512) { ml_kem_free(ctx->ml_kem_pool_512); }
+	
+	if(ctx->all_u16_mem_512) 
+	{ 
+		ml_kem_memzero(ctx->all_u16_mem_512, (sizeof(u16) * (ML_KEM_512 * 3 + 2) * ML_KEM_N) * ctx->ml_kem_pool_count_512);
+		ml_kem_free(ctx->all_u16_mem_512); 
+	}
+	
+	if(ctx->all_u8_mem_512) 
+	{ 
+		ml_kem_memzero(ctx->all_u8_mem_512, (RES_PUBL_PART_LVL_512 + LEN_CIPHERTEXT_512 + ML_KEM_MATRIX_XOF_BYTES) * ctx->ml_kem_pool_count_512);
+		ml_kem_free(ctx->all_u8_mem_512); 
+	}
+	
+	// Delete all 768 level mem
+	if(ctx->ml_kem_pool_768 && ctx->ml_kem_pool_768->encaps_ctx) 
+	{ 
+		ml_kem_memzero(ctx->ml_kem_pool_768->encaps_ctx, sizeof(struct ml_kem_encaps_ctx) * ctx->ml_kem_pool_count_768);
+		ml_kem_free(ctx->ml_kem_pool_768->encaps_ctx); 
+	}
+	
+	if(ctx->ml_kem_pool_768) { ml_kem_free(ctx->ml_kem_pool_768); }
+	
+	if(ctx->all_u16_mem_768) 
+	{ 
+		ml_kem_memzero(ctx->all_u16_mem_768, (sizeof(u16) * (ML_KEM_768 * 3 + 2) * ML_KEM_N) * ctx->ml_kem_pool_count_768);
+		ml_kem_free(ctx->all_u16_mem_768); 
+	}
+	
+	if(ctx->all_u8_mem_768) 
+	{ 
+		ml_kem_memzero(ctx->all_u8_mem_768, (RES_PUBL_PART_LVL_768 + LEN_CIPHERTEXT_768 + ML_KEM_MATRIX_XOF_BYTES) * ctx->ml_kem_pool_count_768);
+		ml_kem_free(ctx->all_u8_mem_768);
+	}
+	
+	// Delete all 1024 level mem
+	if(ctx->ml_kem_pool_1024 && ctx->ml_kem_pool_1024->encaps_ctx) 
+	{ 
+		ml_kem_memzero(ctx->ml_kem_pool_1024->encaps_ctx, sizeof(struct ml_kem_encaps_ctx) * ctx->ml_kem_pool_count_1024);
+		ml_kem_free(ctx->ml_kem_pool_1024->encaps_ctx); 
+	}
+	
+	if(ctx->ml_kem_pool_1024) { ml_kem_free(ctx->ml_kem_pool_1024); }
+	
+	if(ctx->all_u16_mem_1024) 
+	{ 
+		ml_kem_memzero(ctx->all_u16_mem_1024, (sizeof(u16) * (ML_KEM_1024 * 3 + 2) * ML_KEM_N) * ctx->ml_kem_pool_count_1024);
+		ml_kem_free(ctx->all_u16_mem_1024); 
+	}
+	
+	if(ctx->all_u8_mem_1024) 
+	{ 
+		ml_kem_memzero(ctx->all_u8_mem_1024, (RES_PUBL_PART_LVL_1024 + LEN_CIPHERTEXT_1024 + ML_KEM_MATRIX_XOF_BYTES) * ctx->ml_kem_pool_count_1024);
+		ml_kem_free(ctx->all_u8_mem_1024); 
+	}
+	
+	ml_kem_free(ctx);
 }
 
 // For export in Linux kernel
