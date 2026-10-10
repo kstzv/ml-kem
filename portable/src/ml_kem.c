@@ -10,6 +10,7 @@ u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result, ml_kem_entropy_f
 void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
 int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
+struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
 
 // Forward declarations of local function in this module
 STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
@@ -327,6 +328,58 @@ int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_pu
 	memcpy(buffer_for_public_key, pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg_len);
 	
 	return 0;
+}
+
+struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024)
+{
+	if(number_slots_512 == 0 && number_slots_768 == 0 && number_slots_1024 == 0) { return err_create_encaps_pool(-ML_KEM_EINVAL); }
+	else if(number_slots_512 > ML_KEM_MAX_POOL_SLOTS 
+		|| number_slots_768 > ML_KEM_MAX_POOL_SLOTS 
+			|| number_slots_1024 > ML_KEM_MAX_POOL_SLOTS) { return err_create_encaps_pool(-ML_KEM_EINVAL); }
+			
+	struct ml_kem_pool_encaps_ctx *ctx;
+	ctx = ml_kem_alloc(sizeof(struct ml_kem_pool_encaps_ctx));
+	if(!ctx) { return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+	ml_kem_memzero(ctx, sizeof(struct ml_kem_pool_encaps_ctx));
+	int ret = 0;
+	
+	if(number_slots_512 != 0)
+	{
+		ret = ml_kem_create_all_structs(ctx, ML_KEM_512, number_slots_512);
+		if(ret != 0) {  ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+		
+		ret = ml_kem_assign_encaps_pool_u16_buffers(ctx, ML_KEM_512, number_slots_512);
+		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+		
+		ret = ml_kem_assign_encaps_pool_u8_buffers(ctx, ML_KEM_512, number_slots_512);
+		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+	}
+	
+	if(number_slots_768 != 0)
+	{
+		ret = ml_kem_create_all_structs(ctx, ML_KEM_768, number_slots_768);
+		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+		
+		ret = ml_kem_assign_encaps_pool_u16_buffers(ctx, ML_KEM_768, number_slots_768);
+		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+		
+		ret = ml_kem_assign_encaps_pool_u8_buffers(ctx, ML_KEM_768, number_slots_768);
+		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+	}
+	
+	if(number_slots_1024 != 0)
+	{
+		ret = ml_kem_create_all_structs(ctx, ML_KEM_1024, number_slots_1024);
+		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+		
+		ret = ml_kem_assign_encaps_pool_u16_buffers(ctx, ML_KEM_1024, number_slots_1024);
+		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+		
+		ret = ml_kem_assign_encaps_pool_u8_buffers(ctx, ML_KEM_1024, number_slots_1024);
+		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
+	}
+	
+	return ctx;
 }
 
 // For export in Linux kernel
