@@ -273,6 +273,11 @@ extern void keccak_f1600_ct(u64 state[25]);
 extern struct ml_kem_pool_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, size_t ml_kem_pool_count, struct ml_kem_ctx *private_keys);
 extern void ml_kem_pool_destroy(struct ml_kem_pool_decaps_ctx *head_pool);
 
+// Encapsulation pool API (File #10)
+extern int ml_kem_create_all_structs(struct ml_kem_pool_encaps_ctx *ctx, enum ml_kem_k k, size_t number_slots);
+extern int ml_kem_assign_encaps_pool_u16_buffers(struct ml_kem_pool_encaps_ctx *ctx, enum ml_kem_k k, size_t number_slots);
+extern int ml_kem_assign_encaps_pool_u8_buffers(struct ml_kem_pool_encaps_ctx *ctx, enum ml_kem_k k, size_t number_slots);
+
 // ---------------------------Functions of Barrett Reductions for NTT--------------------------------------------------------------------------------
 // Special constants for Barrett reduction in ML-KEM.
 // The ML-KEM standard (FIPS 203) defines the modulus q = 3329,
