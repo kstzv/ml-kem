@@ -111,6 +111,7 @@ struct ml_kem_encaps_ctx *ml_kem_alloc_encaps(u8 *public_key_msg, enum ml_kem_k 
 	return NULL;
 }
 
+// Моя примітка: ТУТ ВИТІК - ПЕРЕРОБИТИ
 // Wipe (zeroize) sensitive data stored in encapsulation context
 void ml_kem_wipe_encaps(struct ml_kem_encaps_ctx *ctx)
 {
