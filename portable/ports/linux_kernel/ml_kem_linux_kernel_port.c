@@ -55,15 +55,7 @@ struct ml_kem_pool_decaps_ctx *err_create_keys(const int err)
 }
 
 // Error in encaps
-u8 *err_encaps(const int err)
-{
-	if(err == -ML_KEM_EINVAL) { return ERR_PTR(-EINVAL); }
-	else if( err == -ML_KEM_ENOMEM) { return ERR_PTR(-ENOMEM); }
-	else if( err == -ML_KEM_SYSTEM_ENTROPY_FAILED) { return ERR_PTR(-EIO); }
-	else if( err == -ML_KEM_CALLBACK_ENTROPY_FAILED) { return ERR_PTR(-EIO); }
-	else if( err == -ML_KEM_ENCAPS_PARAM_ERR) { return ERR_PTR(-EINVAL); }
-	else { return ERR_PTR(-EFAULT); }
-}
+int err_encaps(const int err) { return err; }
 
 // Error in decaps
 int err_decaps(const int err) { return err; }
