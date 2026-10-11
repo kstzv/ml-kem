@@ -70,12 +70,7 @@ struct ml_kem_pool_decaps_ctx *err_create_keys(const int err)
 }
 
 // Error in encaps
-u8 *err_encaps(const int err)
-{
-	(void)err;
-	return NULL;
-}
-
+int err_encaps(const int err) { return err; }
 
 // Error in decaps
 int err_decaps(const int err) { return err; }
