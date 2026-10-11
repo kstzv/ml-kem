@@ -233,6 +233,10 @@ struct ml_kem_pool_encaps_ctx {
     u16 *all_u16_mem_512;
     u16 *all_u16_mem_768;
     u16 *all_u16_mem_1024;
+
+	u8 *all_u8_mem_512;
+    u8 *all_u8_mem_768;
+    u8 *all_u8_mem_1024;
 };
 
 // Key generation API (File #2)
