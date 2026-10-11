@@ -448,7 +448,8 @@ EXPORT_SYMBOL_GPL(ml_kem_destroy_core);
 EXPORT_SYMBOL_GPL(ml_kem_get_public_key);
 EXPORT_SYMBOL_GPL(ml_kem_encaps_core);
 EXPORT_SYMBOL_GPL(ml_kem_decaps_core);
-EXPORT_SYMBOL_GPL(ml_kem_ciphertext_destroy_core);
+EXPORT_SYMBOL_GPL(create_encaps_pool);
+EXPORT_SYMBOL_GPL(ml_kem_encaps_pool_destroy);
 
 #endif
 
