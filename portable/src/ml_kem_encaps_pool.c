@@ -43,7 +43,7 @@ int ml_kem_create_all_structs(struct ml_kem_pool_encaps_ctx *ctx, enum ml_kem_k 
 		
 		public_key_msg_len = RES_PUBL_PART_LVL_1024;
 		ciphertext_len = LEN_CIPHERTEXT_1024;
-	}
+	} else { ml_kem_free(first_slot); ml_kem_free(encapses); return 1; }
 	
 	for(size_t i = 0; i < number_slots; i++)
 	{
