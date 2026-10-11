@@ -67,6 +67,11 @@ int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size
 // -size_buffer      		- size of the buffer (must conform to the ML-KEM security level)
 int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
 
+// Моя примітка: ДОДАТИ ОПИС В КОМЕНТАРЯХ ЦИХ ДВОХ ФУНКЦІЙ
+struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
+
+void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
+
 #ifdef ML_KEM_DUDECT_TEST 
 
 // INTERNAL FUNCTION EXPOSED FOR TESTING
@@ -74,11 +79,6 @@ int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_pu
 // It is exposed here ONLY for dudect-based constant-time analysis
 // WARNING: 1. Not part of the public API; 2. Not intended for external use;
 void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
-
-// Моя примітка: ДОДАТИ ОПИС В КОМЕНТАРЯХ ЦИХ ДВОХ ФУНКЦІЙ
-struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
-
-void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
 
 #endif // ML_KEM_DUDECT_TEST
 
