@@ -100,95 +100,78 @@ void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool)
 	if(keys) { ml_kem_destroy_ctx_struct(keys); }
 }
 
-// Моя примітка:буде кардинально перероблено цю функцію
-// Encapsulation wrapper (client-side, one-shot API)
-// Parameters:
-//  pk     - public key in serialized byte format (as defined by ML-KEM spec)
-//  level  - security level (ML_KEM_512 / 768 / 1024)
-//  result - output buffer (32 bytes) for shared secret (K_bar)
-//  entropy - callback used to obtain cryptographically secure random bytes. Pass NULL to use the operating system random source
-// Returns:
-//  Pointer to newly allocated ciphertext buffer (serialized format),
-//  or NULL on failure.
-// Memory ownership:
-//  - Returned ciphertext MUST be freed by caller using ml_kem_ciphertext_destroy_core()
-//  - 'result' buffer is fully overwritten
-// Notes:
-//  - This is a high-level convenience wrapper over ml_kem_encapsulation()
-//  - Internally allocates temporary context which is securely wiped before free
-//  - No secret-dependent branching occurs in this wrapper
-u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result, ml_kem_entropy_fn entropy)
+// Моя примітка: слід англійською не забути її описати
+int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t size_pk, u8 *buffer_ct, size_t size_ct, u8 *buffer_ss, size_t size_ss, ml_kem_entropy_fn entropy)
 {
-	// Result pointer initialized to NULL (returned on failure)
-	u8 *ciphertext;
-	ciphertext = NULL;
+	if(!pk || !buffer_ct || !buffer_ss) { return err_encaps(-ML_KEM_EINVAL); }
 	
-	// Validate security level
-	if(!(level == ML_KEM_512 || level == ML_KEM_768 || level == ML_KEM_1024))
-	{ return err_encaps(-ML_KEM_EINVAL); }
-	
-	// Validate input pointers
-	if(!pk || !result) { return err_encaps(-ML_KEM_EINVAL); }
-	// Clear output buffer (defensive initialization)
-	ml_kem_memzero(result, ML_KEM_SEED_BYTES);
+	enum ml_kem_k level;
+	struct ml_kem_encaps_ctx *ctx = NULL;
+	struct ml_kem_encaps_slot *slot = NULL;
+	size_t curr_slot;
+	if(!ctx_pool)
+	{
+		if(size_pk == RES_PUBL_PART_LVL_512 && size_ct == LEN_CIPHERTEXT_512 && size_ss == ML_KEM_SEED_BYTES) { level = ML_KEM_512; }
+		else if(size_pk == RES_PUBL_PART_LVL_768 && size_ct == LEN_CIPHERTEXT_768 && size_ss == ML_KEM_SEED_BYTES) { level = ML_KEM_768; }
+		else if(size_pk == RES_PUBL_PART_LVL_1024 && size_ct == LEN_CIPHERTEXT_1024 && size_ss == ML_KEM_SEED_BYTES) { level = ML_KEM_1024; }
+		else { return err_encaps(-ML_KEM_EINVAL); }
 		
-	// Allocate encapsulation context
-	struct ml_kem_encaps_ctx *ctx;
-	ctx = ml_kem_alloc_encaps(pk, level);
-	if(!ctx) { return err_encaps(-ML_KEM_ENOMEM); }
+		ctx = ml_kem_alloc_encaps(pk, level);
+		if(!ctx) { return err_encaps(-ML_KEM_ENOMEM); }
+	}else
+	{
+		size_t size_pool; 
+		if(size_pk == RES_PUBL_PART_LVL_512 && size_ct == LEN_CIPHERTEXT_512 && size_ss == ML_KEM_SEED_BYTES) 
+		{ 
+			slot = ctx_pool->ml_kem_pool_512;
+			size_pool = ctx_pool->ml_kem_pool_count_512; 
+		}else if(size_pk == RES_PUBL_PART_LVL_768 && size_ct == LEN_CIPHERTEXT_768 && size_ss == ML_KEM_SEED_BYTES) 
+		{ 
+			slot = ctx_pool->ml_kem_pool_768;
+			size_pool = ctx_pool->ml_kem_pool_count_768; 
+		} else if(size_pk == RES_PUBL_PART_LVL_1024 && size_ct == LEN_CIPHERTEXT_1024 && size_ss == ML_KEM_SEED_BYTES) 
+		{ 
+			slot = ctx_pool->ml_kem_pool_1024;
+			size_pool = ctx_pool->ml_kem_pool_count_1024; 
+		}else { return err_encaps(-ML_KEM_EINVAL); }
+		
+		if(!slot || size_pool == 0 || size_pool > ML_KEM_MAX_POOL_SLOTS) { return err_encaps(-ML_KEM_EINVAL); }
+		// Acquire a free slot (lock-free)
+		curr_slot = ML_KEM_MAX_POOL_SLOTS + 1;
+		for(size_t i = 0; i < size_pool; i++)
+		{
+			bool acquired;
+			acquired = ml_kem_try_acquire_slot(&slot[i].is_free);
+			if(acquired) { curr_slot = i; break; }
+		}
+		
+		// If no slot available → caller must retry later
+		if(curr_slot == ML_KEM_MAX_POOL_SLOTS + 1) { return err_encaps(-EBUSY); }
+		
+		ctx = slot[curr_slot].encaps_ctx;
+		memcpy(ctx->public_key_msg, pk, size_pk);
+	}
 	
 	// Perform encapsulation (client mode: msg=NULL, hash_pk=NULL)
+	int ret = 0;
 	ml_kem_encapsulation(ctx, NULL, NULL, entropy);
-	if(ctx->err != 0) { ciphertext = err_encaps(ctx->err); goto exit; } 
+	if(ctx->err != 0) { ret = err_encaps(ctx->err); goto exit; } 
 	
-	// Allocate memory for final ciphertext
-	ciphertext = ml_kem_alloc(ctx->ciphertext_len);
-	if(!ciphertext) { ciphertext = err_encaps(-ML_KEM_ENOMEM); goto exit; } 
-	// Initialize ciphertext buffer
-	ml_kem_memzero(ciphertext, ctx->ciphertext_len);
+	memcpy(buffer_ss, ctx->K_bar, ML_KEM_SEED_BYTES);
+	memcpy(buffer_ct, ctx->ciphertext, size_ct);
 	
-	// Copy outputs:
-	//  - shared secret (K_bar) → result buffer
-	//  - serialized ciphertext → allocated buffer
-	memcpy(result, ctx->K_bar, ML_KEM_SEED_BYTES);
-	memcpy(ciphertext, ctx->ciphertext, ctx->ciphertext_len); 
-	
-	// Exit path:
-	//  - on failure: ciphertext == NULL, result is zeroed
-	//  - on success: ciphertext contains valid data
 	exit:
-		ml_kem_wipe_encaps(ctx);     // wipe sensitive data
-		ml_kem_destroy_encaps(ctx);  // free context
-		return ciphertext;
-}
-
-// Моя примітка: скоріше за все ця функція буде вилучена 
-// Ciphertext destructor (client-side)
-// Parameters:
-//  ciphertext - buffer returned by ml_kem_encaps_core()
-//  level      - security level used during encapsulation
-// Behavior:
-//  - Securely wipes ciphertext contents
-//  - Frees allocated memory
-// Notes:
-//  - Safe to call with NULL
-//  - Does nothing if level is invalid
-//  - Ciphertext size depends on ML-KEM level
-void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level)
-{
-	// Validate pointer
-	if(!ciphertext) { return; }
-	
-	// Determine ciphertext length based on security level
-	size_t len;
-	if(level == ML_KEM_512) { len = LEN_CIPHERTEXT_512; }
-	else if(level == ML_KEM_768) { len = LEN_CIPHERTEXT_768; }
-	else if(level == ML_KEM_1024) { len = LEN_CIPHERTEXT_1024; }
-	else { return; }
-	
-	// Secure wipe and free
-	ml_kem_memzero(ciphertext, len);
-	ml_kem_free(ciphertext);
+		ml_kem_wipe_encaps(ctx);
+		if(!ctx_pool) 
+		{ 
+			ml_kem_destroy_encaps(ctx); 
+		}else 
+		{ 
+			ml_kem_release_slot(&slot[curr_slot].is_free); 
+			ctx = NULL; 
+			slot = NULL; 
+		}
+		return ret;
 }
 
 // Decapsulation core (server-side API)
