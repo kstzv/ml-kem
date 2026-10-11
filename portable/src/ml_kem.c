@@ -107,7 +107,7 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 	enum ml_kem_k level;
 	struct ml_kem_encaps_ctx *ctx = NULL;
 	struct ml_kem_encaps_slot *slot = NULL;
-	size_t curr_slot;
+	size_t curr_slot = ML_KEM_MAX_POOL_SLOTS + 1;
 	if(!ctx_pool)
 	{
 		if(size_pk == RES_PUBL_PART_LVL_512 && size_ct == LEN_CIPHERTEXT_512 && size_ss == ML_KEM_SEED_BYTES) { level = ML_KEM_512; }
@@ -136,7 +136,6 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 		
 		if(!slot || size_pool == 0 || size_pool > ML_KEM_MAX_POOL_SLOTS) { return err_encaps(-ML_KEM_EINVAL); }
 		// Acquire a free slot (lock-free)
-		curr_slot = ML_KEM_MAX_POOL_SLOTS + 1;
 		for(size_t i = 0; i < size_pool; i++)
 		{
 			bool acquired;
