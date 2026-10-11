@@ -1,21 +1,13 @@
 > [!WARNING]
-> **UNDER ACTIVE REFACTORING — DEVELOPMENT VERSION IS UNSTABLE**
->
-> This project is currently undergoing major refactoring.
->
-> The current source code in the repository may contain
-> bugs, regressions, and incomplete functionality.
->
-> **Do not use the current development branch.**
->
-> **Security issue identified in published releases:**
-> Incomplete zeroization of sensitive cryptographic material
-> may leave residual secret data in memory.
-> The author is actively working on a fix, which is planned
-> for the next release.
->
-> Until this issue is resolved, both the development branch
-and published releases should be used for research purposes only.
+**UNDER ACTIVE REFACTORING — DEVELOPMENT VERSION IS UNSTABLE**
+
+This project is currently undergoing major refactoring. The current source code in the repository may contain bugs, regressions, and incomplete functionality.
+
+**Do not use the current development branch in production.**
+
+**Previously identified security issue:** The incomplete zeroization of sensitive cryptographic material has been fixed in the current development code. However, previously published releases may still contain this vulnerability.
+
+Until the refactoring is completed and a new stable release is published, this implementation should be used for research and testing purposes only.
 
 # ML-KEM (FIPS 203) — Pure C Implementation
 
