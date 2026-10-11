@@ -38,30 +38,8 @@ struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t 
 // Safe to call with NULL.
 void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
 
-
-// Perform encapsulation (client-side).
-// Parameters:
-//  pk      - public key (serialized, standard format)
-//  level   - ML-KEM security level
-// Returns:
-//  Pointer to allocated ciphertext buffer on success
-//  NULL on failure
-// Notes:
-//  - Caller is responsible for freeing ciphertext via
-//    ml_kem_ciphertext_destroy_core()
-//  - Result buffer is always zero-initialized before use
-u8 *ml_kem_encaps_core(u8 *pk, enum ml_kem_k level, u8 *result, ml_kem_entropy_fn entropy);
-
-
-// Destroy ciphertext buffer returned by encapsulation.
-// Parameters:
-//  ciphertext - ciphertext buffer returned by ml_kem_encaps_core()
-//  level      - ML-KEM security level (used to determine size)
-// Behavior:
-//  - Wipes ciphertext contents
-//  - Frees memory
-// Safe to call with NULL.
-void ml_kem_ciphertext_destroy_core(u8 *ciphertext, enum ml_kem_k level);
+// Моя примітка: англійською описати
+int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t size_pk, u8 *buffer_ct, size_t size_ct, u8 *buffer_ss, size_t size_ss, ml_kem_entropy_fn entropy);
 
 
 // Perform decapsulation (server-side).
