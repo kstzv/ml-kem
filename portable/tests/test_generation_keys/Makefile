@@ -18,6 +18,7 @@ SRC_CORE = \
     ../../src/ml_kem_pool.c \
     ../../src/ml_kem_sha3.c \
     ../../src/ml_kem_shake.c
+	../../src/ml_kem_encaps_pool.c
 
 TEST = test.c
 
