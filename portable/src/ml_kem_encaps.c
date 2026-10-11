@@ -68,13 +68,13 @@ struct ml_kem_encaps_ctx *ml_kem_alloc_encaps(u8 *public_key_msg, enum ml_kem_k 
 	 // Allocate contiguous buffer for all u16 polynomial data:
 	 // Layout:
 	 //   [u | v | public_key | y | poly]
-	ctx->u = ml_kem_alloc(sizeof(u16) * ML_KEM_N * (3 * ctx->k + 2));
-	if (!ctx->u) { goto first_error_exit; }
-	ml_kem_memzero(ctx->u, sizeof(u16) * ML_KEM_N * (3 * ctx->k + 2));
-	ctx->v          = ctx->u + ML_KEM_N * ctx->k;
-	ctx->public_key = ctx->v + ML_KEM_N;
-	ctx->y          = ctx->public_key + ML_KEM_N * ctx->k;
-	ctx->poly       = ctx->y + ML_KEM_N * ctx->k;
+	ctx->public_key = ml_kem_alloc(sizeof(u16) * ML_KEM_N * (3 * ctx->k + 2));
+	if (!ctx->public_key) { goto first_error_exit; }
+	ml_kem_memzero(ctx->public_key, sizeof(u16) * ML_KEM_N * (3 * ctx->k + 2));
+	ctx->u = ctx->public_key + ctx->k * ML_KEM_N;
+	ctx->v = ctx->u + ctx->k * ML_KEM_N;
+	ctx->y = ctx->v + ML_KEM_N;
+	ctx->poly = ctx->y + ctx->k * ML_KEM_N;
 
 	// Allocate buffer for final ciphertext
 	ctx->ciphertext = ml_kem_alloc(ctx->ciphertext_len);
@@ -105,13 +105,12 @@ struct ml_kem_encaps_ctx *ml_kem_alloc_encaps(u8 *public_key_msg, enum ml_kem_k 
 	third_error_exit:
 		ml_kem_free(ctx->ciphertext);
 	second_error_exit:
-		ml_kem_free(ctx->u);
+		ml_kem_free(ctx->public_key);
 	first_error_exit:
 		ml_kem_free(ctx);
 	return NULL;
 }
 
-// Моя примітка: ТУТ ВИТІК - ПЕРЕРОБИТИ
 // Wipe (zeroize) sensitive data stored in encapsulation context
 void ml_kem_wipe_encaps(struct ml_kem_encaps_ctx *ctx)
 {
@@ -123,7 +122,7 @@ void ml_kem_wipe_encaps(struct ml_kem_encaps_ctx *ctx)
 	
 	// Zeroize XOF raw bytes buffer (used for matrix generation)
 	// Note: public_key_msg itself is not wiped here as it is non-secret
-	if(ctx->public_key_msg)
+	if(ctx->raw_bytes)
 	{
 		ml_kem_memzero(ctx->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
 	}
@@ -159,9 +158,9 @@ void ml_kem_destroy_encaps(struct ml_kem_encaps_ctx *ctx)
 	}
 	
 	// Free main polynomial buffer and reset derived pointers
-	if(ctx->u)
+	if(ctx->public_key)
 	{
-		ml_kem_free(ctx->u);
+		ml_kem_free(ctx->public_key);
 		ctx->u = NULL;
 		ctx->poly = NULL;
 		ctx->v = NULL;
