@@ -144,9 +144,9 @@ int main()
 			
 			// Perform encapsulation: input: public key + message seed
 			// Output: shared secret (mass_k_from_encaps) and ciphertext (returned pointer)
-			u8 *curr_ciphertext;
-			curr_ciphertext = ml_kem_encaps_core(mass_ek, k, mass_k_from_encaps, NULL);
-			if(curr_ciphertext == NULL) { return -1; }
+			u8 curr_ciphertext[LEN_CIPHERTEXT_1024];
+			ret = ml_kem_encaps_core(NULL, mass_ek, size_ek_counter, curr_ciphertext, size_ciphertext_counter, mass_k_from_encaps, 32, NULL);
+			if(ret != 0) { return -1; }
 			
 			// Verify shared secret
 			if(memcmp(mass_k_from_encaps, mass_k, ML_KEM_SEED_BYTES) != 0)
@@ -163,10 +163,6 @@ int main()
 			}else{
 				printf("\nDone.... In %zu vector, in ML-KEM-%zu level sequrity CIPHERTEXT is identical with vector NIST....", vectors_counter, level_counter);
 			}
-			
-			// Free ciphertext buffer using dedicated destructor.
-			// Ensures proper zeroization before deallocation.
-			ml_kem_ciphertext_destroy_core(curr_ciphertext, k);
 			
 			vectors_counter++;
 		}
