@@ -118,14 +118,17 @@ int main()
 			struct ml_kem_pool_decaps_ctx *this_ctx;
 			this_ctx = ml_kem_create_object(k, NUMBER_SLOTS, NULL);
 			
-			// Perform encapsulation using public key from generated context. Result: ciphertext and shared secret (mass_K_encaps)
-			u8 *ciphertext;
-			ciphertext = ml_kem_encaps_core(this_ctx->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, k, mass_K_encaps, NULL);
-			if(ciphertext == NULL) { return -1; }
+			u8 pk[RES_PUBL_PART_LVL_1024];
+			ret = ml_kem_get_public_key(this_ctx, pk, size_ek_counter);
+			if(ret != 0) { ml_kem_destroy_core(this_ctx); return -1; }
+			
+			u8 ciphertext[LEN_CIPHERTEXT_1024];
+			ret = ml_kem_encaps_core(NULL, pk, size_ek_counter, ciphertext, len_ciphertext, mass_K_encaps, ML_KEM_SEED_BYTES, NULL);
+			if(ret != 0) { ml_kem_destroy_core(this_ctx); return -1; }
 			
 			// Perform decapsulation: derive shared secret from ciphertext using private key
 			ret = ml_kem_decaps_core(this_ctx, ciphertext, len_ciphertext, mass_K_decaps, ML_KEM_SEED_BYTES);
-			if(ret != 0) { return -1; }
+			if(ret != 0) { ml_kem_destroy_core(this_ctx); return -1; }
 			
 			// Validate correctness: shared secret from encapsulation must match decapsulation result. 
 			// NOTE: memcmp is used here for testing only (not constant-time).
@@ -136,8 +139,27 @@ int main()
 				printf("\nDone.... In %zu vector, in ML-KEM-%zu level sequrity is identical with vector NIST....", vectors_counter, level_counter);
 			}
 			
+			// Check encaps in pool
+			struct ml_kem_pool_encaps_ctx *pool_encaps_ctx;
+			pool_encaps_ctx = create_encaps_pool(5,5,5);
+			ret = ml_kem_encaps_core(pool_encaps_ctx, pk, size_ek_counter, ciphertext, len_ciphertext, mass_K_encaps, ML_KEM_SEED_BYTES, NULL);
+			if(ret != 0) { ml_kem_destroy_core(this_ctx); ml_kem_encaps_pool_destroy(pool_encaps_ctx); return -1; }
+			
+			// Perform decapsulation: derive shared secret from ciphertext using private key
+			ret = ml_kem_decaps_core(this_ctx, ciphertext, len_ciphertext, mass_K_decaps, ML_KEM_SEED_BYTES);
+			if(ret != 0) { ml_kem_destroy_core(this_ctx); return -1; }
+			
+			// Validate correctness: shared secret from encapsulation must match decapsulation result. 
+			// NOTE: memcmp is used here for testing only (not constant-time).
+			if(memcmp(mass_K_encaps, mass_K_decaps, ML_KEM_SEED_BYTES) != 0)
+			{
+				printf("\nWrong! In %zu vector, in ML-KEM-%zu level sequrity!(whith pool for encaps)", vectors_counter, level_counter);
+			}else{
+				printf("\nDone.... In %zu vector, in ML-KEM-%zu level sequrity is identical with vector NIST(whith pool for encaps)....", vectors_counter, level_counter);
+			}
+			
 			// Cleanup resources
-			ml_kem_ciphertext_destroy_core(ciphertext, k);
+			ml_kem_encaps_pool_destroy(pool_encaps_ctx);
 			ml_kem_destroy_core(this_ctx);
 			
 			vectors_counter++;

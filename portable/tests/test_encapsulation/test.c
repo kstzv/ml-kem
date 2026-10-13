@@ -164,6 +164,31 @@ int main()
 				printf("\nDone.... In %zu vector, in ML-KEM-%zu level sequrity CIPHERTEXT is identical with vector NIST....", vectors_counter, level_counter);
 			}
 			
+			// Check encaps in pool
+			struct ml_kem_pool_encaps_ctx *pool_encaps_ctx;
+			pool_encaps_ctx = create_encaps_pool(5,5,5);
+			ret = ml_kem_encaps_core(pool_encaps_ctx, mass_ek, size_ek_counter, curr_ciphertext, size_ciphertext_counter, mass_k_from_encaps, 32, NULL);
+			if(ret != 0) { return -1; }
+			
+			// Verify shared secret
+			if(memcmp(mass_k_from_encaps, mass_k, ML_KEM_SEED_BYTES) != 0)
+			{
+				printf("\nWrong! In %zu vector, in ML-KEM-%zu level sequrity, error KEY SHARE!(whith pool for encaps)", vectors_counter, level_counter);
+			}else{
+				printf("\nDone.... In %zu vector, in ML-KEM-%zu level sequrity KEY SHARE is identical with vector NIST(whith pool for encaps)....", vectors_counter, level_counter);
+			}
+			
+			// Verify ciphertext
+			if(memcmp(curr_ciphertext, mass_c, size_ciphertext_counter) != 0)
+			{
+				printf("\nWrong! In %zu vector, in ML-KEM-%zu level sequrity, error CIPHERTEXT!(whith pool for encaps)", vectors_counter, level_counter);
+			}else{
+				printf("\nDone.... In %zu vector, in ML-KEM-%zu level sequrity CIPHERTEXT is identical with vector NIST(whith pool for encaps)....", vectors_counter, level_counter);
+			}
+			
+			// Cleanup resources
+			ml_kem_encaps_pool_destroy(pool_encaps_ctx);
+			
 			vectors_counter++;
 		}
 			
