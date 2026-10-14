@@ -43,8 +43,8 @@ void *worker(void *arg)
 
     int errors = 0;
 
-    for (int i = 0; i < ITERATIONS; i++) {
-
+    for (int i = 0; i < ITERATIONS; i++) 
+    {
         // Periodically yield CPU to increase scheduling variability and improve contention patterns
         if ((i & 1023) == 0) { sched_yield(); }
 
@@ -78,7 +78,8 @@ int main(void)
     // Create decapsulation pool. Pool size is intentionally smaller than thread count to induce heavy contention
     struct ml_kem_pool_decaps_ctx *pool = ml_kem_create_object(level, pool_size, NULL);
 
-    if (!pool) {
+    if (!pool) 
+    {
         printf("Pool creation failed\n");
         pthread_barrier_destroy(&barrier);
         return 1;
@@ -88,7 +89,8 @@ int main(void)
     u8 public_key[RES_PUBL_PART_LVL_1024];
     int ret = ml_kem_get_public_key(pool, public_key, sizeof(public_key));
 
-    if (ret != 0) {
+    if (ret != 0) 
+    {
         printf("Public key extraction failed: %d\n", ret);
         ml_kem_destroy_core(pool);
         pthread_barrier_destroy(&barrier);
@@ -100,13 +102,10 @@ int main(void)
     u8 shared_secret[ML_KEM_SEED_BYTES];
     u8 ciphertext[LEN_CIPHERTEXT_1024];
 
-    ret = ml_kem_encaps_core(NULL,
-                             public_key, sizeof(public_key),
-                             ciphertext, sizeof(ciphertext),
-                             shared_secret, sizeof(shared_secret),
-                             NULL);
+    ret = ml_kem_encaps_core(NULL, public_key, sizeof(public_key), ciphertext, sizeof(ciphertext), shared_secret, sizeof(shared_secret), NULL);
 
-    if (ret != 0) {
+    if (ret != 0) 
+    {
         printf("Encaps failed: %d\n", ret);
         ml_kem_destroy_core(pool);
         pthread_barrier_destroy(&barrier);
