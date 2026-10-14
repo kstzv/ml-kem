@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sched.h>
+#include <errno.h>
 #include <ml_kem.h>
 
 // High-contention stress test configuration
@@ -37,26 +38,26 @@ void *worker(void *arg)
     struct thread_arg *t = (struct thread_arg *)arg;
     u8 result[ML_KEM_SEED_BYTES];
 
-	// Ensure all threads start at approximately the same time
+    // Ensure all threads start at approximately the same time
     pthread_barrier_wait(&barrier);
 
     int errors = 0;
 
     for (int i = 0; i < ITERATIONS; i++) {
-		
-		// Periodically yield CPU to increase scheduling variability and improve contention patterns
+
+        // Periodically yield CPU to increase scheduling variability and improve contention patterns
         if ((i & 1023) == 0) { sched_yield(); }
 
         int ret = ml_kem_decaps_core(t->pool, t->ciphertext, t->ciphertext_len, result, ML_KEM_SEED_BYTES);
 
-		// Slot was busy — expected under high contention. Simply retry without counting as an error.
+        // Slot was busy — expected under high contention. Skip this attempt without counting as an error.
         if (ret == -EBUSY) { continue; }
 
-		// Any other non-zero return value is considered a failure
-        if (ret != 0)  { errors++; continue; }
+        // Any other non-zero return value is considered a failure
+        if (ret != 0) { errors++; continue; }
 
-		// Validate correctness of the derived shared secret. Any mismatch indicates corruption or race-related issue
-        if (memcmp(result, t->expected_secret, ML_KEM_SEED_BYTES) != 0) 
+        // Validate correctness of the derived shared secret. Any mismatch indicates corruption or a race-related issue
+        if (memcmp(result, t->expected_secret, ML_KEM_SEED_BYTES) != 0)
         {
             printf("MISMATCH!\n");
             errors++;
@@ -74,7 +75,7 @@ int main(void)
 
     pthread_barrier_init(&barrier, NULL, THREADS);
 
-	// Create decapsulation pool. Pool size is intentionally smaller than thread count to induce heavy contention
+    // Create decapsulation pool. Pool size is intentionally smaller than thread count to induce heavy contention
     struct ml_kem_pool_decaps_ctx *pool = ml_kem_create_object(level, pool_size, NULL);
 
     if (!pool) {
@@ -83,20 +84,37 @@ int main(void)
         return 1;
     }
 
-	// Generate a valid ciphertext and corresponding shared secret. This single ciphertext is reused by all threads to isolate
-	// Concurrency effects from input variability
-    u8 shared_secret[ML_KEM_SEED_BYTES];
-    u8 *ciphertext = ml_kem_encaps_core(pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, level, shared_secret, NULL);
+    // Extract public key through the public API rather than accessing internal pool fields
+    u8 public_key[RES_PUBL_PART_LVL_1024];
+    int ret = ml_kem_get_public_key(pool, public_key, sizeof(public_key));
 
-    if (!ciphertext) {
-        printf("Encaps failed\n");
+    if (ret != 0) {
+        printf("Public key extraction failed: %d\n", ret);
         ml_kem_destroy_core(pool);
         pthread_barrier_destroy(&barrier);
         return 1;
     }
-    
-	// Extract ciphertext length from pool context
-    size_t ciphertext_len = pool->ml_kem_pool[0].decrypt_ctx->ciphertext_len;
+
+    // Generate one valid ciphertext and corresponding shared secret using caller-owned output buffers.
+    // This single ciphertext is reused by all threads to isolate concurrency effects from input variability.
+    u8 shared_secret[ML_KEM_SEED_BYTES];
+    u8 ciphertext[LEN_CIPHERTEXT_1024];
+
+    ret = ml_kem_encaps_core(NULL,
+                             public_key, sizeof(public_key),
+                             ciphertext, sizeof(ciphertext),
+                             shared_secret, sizeof(shared_secret),
+                             NULL);
+
+    if (ret != 0) {
+        printf("Encaps failed: %d\n", ret);
+        ml_kem_destroy_core(pool);
+        pthread_barrier_destroy(&barrier);
+        return 1;
+    }
+
+    // Ciphertext length is fixed by the selected level and the caller-owned buffer size
+    size_t ciphertext_len = sizeof(ciphertext);
 
     pthread_t threads[THREADS];
     struct thread_arg arg = { // Shared argument for all threads. Safe because all fields are read-only during execution
@@ -106,23 +124,23 @@ int main(void)
         .expected_secret = shared_secret
     };
 
-	// Spawn worker threads
-    for (int i = 0; i < THREADS; i++) 
+    // Spawn worker threads
+    for (int i = 0; i < THREADS; i++)
     {
         pthread_create(&threads[i], NULL, worker, &arg);
     }
-	
-	// Wait for all threads to complete
-    for (int i = 0; i < THREADS; i++) 
+
+    // Wait for all threads to complete
+    for (int i = 0; i < THREADS; i++)
     {
         pthread_join(threads[i], NULL);
     }
 
-	// Cleanup resources
-    ml_kem_ciphertext_destroy_core(ciphertext, level);
+    // Cleanup resources. Ciphertext is a stack array now and must not be freed.
     ml_kem_destroy_core(pool);
     pthread_barrier_destroy(&barrier);
 
     printf("Test finished\n");
     return 0;
 }
+
