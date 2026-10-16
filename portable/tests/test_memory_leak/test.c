@@ -231,6 +231,39 @@ int func_test_encaps(enum ml_kem_k level)
 		return ret;
 }
 
+#define SLOT_DECAPS_POOL_LIFE_CYCLE 	 40
+#define SLOT_ENCAPS_POOL_LIFE_CYCLE_512  20
+#define SLOT_ENCAPS_POOL_LIFE_CYCLE_768  25
+#define SLOT_ENCAPS_POOL_LIFE_CYCLE_1024 30
+#define NUMBER_LOOPS_FOR_POOL_LIFE_CYCLE 1000
+
+int func_test_pool_lifecycle(enum ml_kem_k level_decaps, size_t slots_decaps, size_t slots_encaps_512, size_t slots_encaps_768, size_t slots_encaps_1024, size_t number_loops)
+{
+    for(size_t i = 0; i < number_loops; i++)
+    {
+        int success = 0;
+
+        struct ml_kem_pool_decaps_ctx *ctx_dec = NULL;
+        struct ml_kem_pool_encaps_ctx *ctx_enc = NULL;
+
+        ctx_dec = ml_kem_create_object(level_decaps, slots_decaps, NULL);
+        if(!ctx_dec) { goto cleanup; }
+
+        ctx_enc = create_encaps_pool(slots_encaps_512, slots_encaps_768, slots_encaps_1024);
+        if(!ctx_enc) { goto cleanup; }
+
+        success = 1;
+
+        cleanup:
+            ml_kem_encaps_pool_destroy(ctx_enc);
+            ml_kem_destroy_core(ctx_dec);
+
+        if(!success) { return -1; }
+    }
+
+    return 0;
+}
+
 int main()
 {
 	int ret = 0;
@@ -288,5 +321,35 @@ int main()
 	}else { printf("\n512 level decaps pool test with %i threads: SUCCESS\n", ret); }
 	printf("\n...............\n");
 	
+	printf("\ntest mem in pools lifecycles...\n");
+	ret = func_test_pool_lifecycle(ML_KEM_512, SLOT_DECAPS_POOL_LIFE_CYCLE, SLOT_ENCAPS_POOL_LIFE_CYCLE_512, SLOT_ENCAPS_POOL_LIFE_CYCLE_768, SLOT_ENCAPS_POOL_LIFE_CYCLE_1024, NUMBER_LOOPS_FOR_POOL_LIFE_CYCLE);
+	if(ret < 0) 
+	{
+		printf("\ntest mem in pools lifecycles ERROR: %i\n", ret);
+		return -1;
+	}else { printf("\ntest mem in pools lifecycles with %d iterations: SUCCESS\n", NUMBER_LOOPS_FOR_POOL_LIFE_CYCLE); }
+	printf("\n...............\n");
+	
 	return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
