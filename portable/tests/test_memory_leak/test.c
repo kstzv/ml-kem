@@ -282,7 +282,7 @@ int main()
 	{
 		printf("\n768 level encaps pool test ERROR: %i\n", ret);
 		return -1;
-	}else { printf("\n512 level encaps pool test with %i threads: SUCCESS\n", ret); }
+	}else { printf("\n768 level encaps pool test with %i threads: SUCCESS\n", ret); }
 	printf("\n...............\n");
 	
 	printf("\n1024 level encaps pool test...\n");
@@ -291,7 +291,7 @@ int main()
 	{
 		printf("\n1024 level encaps pool test ERROR: %i\n", ret);
 		return -1;
-	}else { printf("\n512 level encaps pool test with %i threads: SUCCESS\n", ret); }
+	}else { printf("\n1024 level encaps pool test with %i threads: SUCCESS\n", ret); }
 	printf("\n...............\n");
 	
 	printf("\n512 level decaps pool test...\n");
@@ -309,7 +309,7 @@ int main()
 	{
 		printf("\n768 level decaps pool test ERROR: %i\n", ret);
 		return -1;
-	}else { printf("\n512 level decaps pool test with %i threads: SUCCESS\n", ret); }
+	}else { printf("\n768 level decaps pool test with %i threads: SUCCESS\n", ret); }
 	printf("\n...............\n");
 	
 	printf("\n1024 level decaps pool test...\n");
@@ -318,7 +318,7 @@ int main()
 	{
 		printf("\n1024 level decaps pool test ERROR: %i\n", ret);
 		return -1;
-	}else { printf("\n512 level decaps pool test with %i threads: SUCCESS\n", ret); }
+	}else { printf("\n1024 level decaps pool test with %i threads: SUCCESS\n", ret); }
 	printf("\n...............\n");
 	
 	printf("\ntest mem in pools lifecycles...\n");
