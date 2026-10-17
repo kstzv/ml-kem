@@ -1,13 +1,13 @@
-CC ?= gcc
+CC = gcc
 
 CFLAGS = -O3 -std=c11 -Wall -Wextra \
-		 -DUSERSPACE \
+         -DUSERSPACE \
          -I../../src \
          -pthread \
-         -I../../ports/userspace 
+         -I../../ports/userspace
 
 SRC_CORE = \
-	../../ports/userspace/ml_kem_userspace_port.c \
+    ../../ports/userspace/ml_kem_userspace_port.c \
     ../../src/keccak1600.c \
     ../../src/ml_kem.c \
     ../../src/ml_kem_create_keys.c \
@@ -19,12 +19,25 @@ SRC_CORE = \
     ../../src/ml_kem_shake.c \
     ../../src/ml_kem_encaps_pool.c
 
-TEST = TEST_pool.c
+TARGETS = test_decaps_pool test_encaps_pool
 
-TARGET = test_pool
+.PHONY: all run run-decaps run-encaps clean
 
-all:
-	$(CC) $(CFLAGS) $(SRC_CORE) $(TEST) -lm -o $(TARGET)
+all: $(TARGETS)
+
+test_decaps_pool: test_decaps_pool.c $(SRC_CORE)
+	$(CC) $(CFLAGS) $(SRC_CORE) $< -lm -o $@
+
+test_encaps_pool: test_encaps_pool.c $(SRC_CORE)
+	$(CC) $(CFLAGS) $(SRC_CORE) $< -lm -o $@
+
+run: run-decaps run-encaps
+
+run-decaps: test_decaps_pool
+	./test_decaps_pool
+
+run-encaps: test_encaps_pool
+	./test_encaps_pool
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGETS)
