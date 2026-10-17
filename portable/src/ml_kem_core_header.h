@@ -216,24 +216,23 @@ struct ml_kem_pool_decaps_ctx {
 
 // Single encapsulation slot
 struct ml_kem_encaps_slot {
-    struct ml_kem_encaps_ctx *encaps_ctx;
-    ml_kem_atomic_t is_free;
+    struct ml_kem_encaps_ctx *encaps_ctx; // ptr to operating encaps struct
+    ml_kem_atomic_t is_free;              // atomic value for access to this slot
 };
 
 // Pool of encapsulation slots
 struct ml_kem_pool_encaps_ctx {
-	struct ml_kem_encaps_slot *ml_kem_pool_512;
-	struct ml_kem_encaps_slot *ml_kem_pool_768;
-	struct ml_kem_encaps_slot *ml_kem_pool_1024;
-    size_t ml_kem_pool_count_512;
-    size_t ml_kem_pool_count_768;
-    size_t ml_kem_pool_count_1024;
+	struct ml_kem_encaps_slot *ml_kem_pool_512;  // pool for slots 512 level
+	struct ml_kem_encaps_slot *ml_kem_pool_768;  // pool for slots 768 level
+	struct ml_kem_encaps_slot *ml_kem_pool_1024; // pool for slots 1024 level
+    size_t ml_kem_pool_count_512;                // number slots for 512 level
+    size_t ml_kem_pool_count_768;				 // number slots for 768 level
+    size_t ml_kem_pool_count_1024;				 // number slots for 1024 level
     
-    // Allocated memory regions
+    // Allocated memory regions(it needs for destructor)
     u16 *all_u16_mem_512;
     u16 *all_u16_mem_768;
     u16 *all_u16_mem_1024;
-
 	u8 *all_u8_mem_512;
     u8 *all_u8_mem_768;
     u8 *all_u8_mem_1024;

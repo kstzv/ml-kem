@@ -38,9 +38,24 @@ struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t 
 // Safe to call with NULL.
 void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
 
-// Моя примітка: англійською описати
+// Encapsulation core (client-side API)
+// Parameters:
+//  ctx_pool  - optional reusable encapsulation pool; NULL to use a temporary context
+//  pk        - serialized public key used for encapsulation
+//  size_pk   - size of the public key (must match the ML-KEM security level)
+//  buffer_ct - output buffer for the generated ciphertext
+//  size_ct   - size of the ciphertext buffer (must match the security level)
+//  buffer_ss - output buffer for the derived 32-byte shared secret
+//  size_ss   - size of the shared secret buffer (must be ML_KEM_SEED_BYTES)
+//  entropy   - callback used to obtain cryptographically secure random bytes;
+//              NULL to use the operating system random source
+// Returns:
+//  0 on success
+//  -ML_KEM_EINVAL on invalid pointers, buffer sizes, or pool configuration
+//  -ML_KEM_ENOMEM if temporary context allocation fails
+//  -EBUSY if no free slot is available in the selected pool
+//  Other error codes propagated from the encapsulation routine (e.g., entropy failure)
 int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t size_pk, u8 *buffer_ct, size_t size_ct, u8 *buffer_ss, size_t size_ss, ml_kem_entropy_fn entropy);
-
 
 // Perform decapsulation (server-side).
 // Parameters:
@@ -67,9 +82,21 @@ int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size
 // -size_buffer      		- size of the buffer (must conform to the ML-KEM security level)
 int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
 
-// Моя примітка: ДОДАТИ ОПИС В КОМЕНТАРЯХ ЦИХ ДВОХ ФУНКЦІЙ
+// Create and initialize a reusable encapsulation pool
+// Parameters:
+//  number_slots_512  - number of slots for ML-KEM-512 (0 disables this level)
+//  number_slots_768  - number of slots for ML-KEM-768 (0 disables this level)
+//  number_slots_1024 - number of slots for ML-KEM-1024 (0 disables this level)
+// Returns:
+//  Pointer to the initialized encapsulation pool on success
+//  Error result from err_create_encaps_pool() on failure (NULL in the userspace port)
 struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
 
+// Destroy a reusable encapsulation pool and release its allocated memory.
+// Parameters:
+//  ctx - encapsulation pool created by create_encaps_pool()
+// Returns:
+//  Nothing (void)
 void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
 
 #ifdef ML_KEM_DUDECT_TEST 

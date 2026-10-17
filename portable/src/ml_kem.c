@@ -99,15 +99,43 @@ void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool)
 	if(keys) { ml_kem_destroy_ctx_struct(keys); }
 }
 
-// Моя примітка: слід англійською не забути її описати
+// Encapsulation core (client-side API)
+// Parameters:
+//  ctx_pool  - optional reusable encapsulation pool; NULL to use a temporary context
+//  pk        - serialized public key used for encapsulation
+//  size_pk   - size of the public key (must match the ML-KEM security level)
+//  buffer_ct - output buffer for the generated ciphertext
+//  size_ct   - size of the ciphertext buffer (must match the security level)
+//  buffer_ss - output buffer for the derived 32-byte shared secret
+//  size_ss   - size of the shared secret buffer (must be ML_KEM_SEED_BYTES)
+//  entropy   - callback used to obtain cryptographically secure random bytes;
+//              NULL to use the operating system random source
+// Returns:
+//  0 on success
+//  -ML_KEM_EINVAL on invalid pointers, buffer sizes, or pool configuration
+//  -ML_KEM_ENOMEM if temporary context allocation fails
+//  -EBUSY if no free slot is available in the selected pool
+//  Other error codes propagated from the encapsulation routine (e.g., entropy failure)
+// Behavior:
+//  - Selects the ML-KEM security level from public key, ciphertext, and secret sizes
+//  - Uses a newly allocated context when ctx_pool is NULL
+//  - Otherwise acquires a reusable slot in the pool corresponding to the selected level
+//  - Copies the ciphertext and shared secret to caller-provided buffers on success
+//  - Wipes working data and destroys the temporary context or releases the pool slot
+// Notes:
+//  - The caller must provide valid buffers with the specified sizes
+//  - In pool mode, the selected security level must have an initialized subpool
 int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t size_pk, u8 *buffer_ct, size_t size_ct, u8 *buffer_ss, size_t size_ss, ml_kem_entropy_fn entropy)
 {
+	// Validate mandatory input and output pointers
 	if(!pk || !buffer_ct || !buffer_ss) { return err_encaps(-ML_KEM_EINVAL); }
 	
+	// Prepare context and pool slot selection
 	enum ml_kem_k level;
 	struct ml_kem_encaps_ctx *ctx = NULL;
 	struct ml_kem_encaps_slot *slot = NULL;
 	size_t curr_slot = ML_KEM_MAX_POOL_SLOTS + 1;
+	// Standalone mode: determine the level and allocate a temporary context
 	if(!ctx_pool)
 	{
 		if(size_pk == RES_PUBL_PART_LVL_512 && size_ct == LEN_CIPHERTEXT_512 && size_ss == ML_KEM_SEED_BYTES) { level = ML_KEM_512; }
@@ -119,6 +147,7 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 		if(!ctx) { return err_encaps(-ML_KEM_ENOMEM); }
 	}else
 	{
+		// Pool mode: select the matching set of reusable encapsulation slots
 		size_t size_pool; 
 		if(size_pk == RES_PUBL_PART_LVL_512 && size_ct == LEN_CIPHERTEXT_512 && size_ss == ML_KEM_SEED_BYTES) 
 		{ 
@@ -134,6 +163,7 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 			size_pool = ctx_pool->ml_kem_pool_count_1024; 
 		}else { return err_encaps(-ML_KEM_EINVAL); }
 		
+		// Reject an absent or incorrectly sized subpool
 		if(!slot || size_pool == 0 || size_pool > ML_KEM_MAX_POOL_SLOTS) { return err_encaps(-ML_KEM_EINVAL); }
 		// Acquire a free slot (lock-free)
 		for(size_t i = 0; i < size_pool; i++)
@@ -146,6 +176,7 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 		// If no slot available → caller must retry later
 		if(curr_slot == ML_KEM_MAX_POOL_SLOTS + 1) { return err_encaps(-EBUSY); }
 		
+		// Use the acquired context with the public key supplied for this operation
 		ctx = slot[curr_slot].encaps_ctx;
 		memcpy(ctx->public_key_msg, pk, size_pk);
 	}
@@ -155,16 +186,21 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 	ml_kem_encapsulation(ctx, NULL, NULL, entropy);
 	if(ctx->err != 0) { ret = err_encaps(ctx->err); goto exit; } 
 	
+	// Write both output values only after successful encapsulation
 	memcpy(buffer_ss, ctx->K_bar, ML_KEM_SEED_BYTES);
 	memcpy(buffer_ct, ctx->ciphertext, size_ct);
 	
+	// Common cleanup path for both success and encapsulation failure
 	exit:
+		// Wipe temporary cryptographic data before releasing resources
 		ml_kem_wipe_encaps(ctx);
 		if(!ctx_pool) 
 		{ 
+			// Standalone mode: free the temporary context
 			ml_kem_destroy_encaps(ctx); 
 		}else 
 		{ 
+			// Pool mode: make the acquired slot available for subsequent calls
 			ml_kem_release_slot(&slot[curr_slot].is_free); 
 			ctx = NULL; 
 			slot = NULL; 
@@ -314,127 +350,186 @@ int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_pu
 	return 0;
 }
 
-// Моя примітка: створення пулу інкапсуляцій (в фінальному релізі буде додано ноармальнй опис в коментарях) 
+// Create and initialize a reusable encapsulation pool.
+// Parameters:
+//  number_slots_512  - number of slots for ML-KEM-512 (0 disables this level)
+//  number_slots_768  - number of slots for ML-KEM-768 (0 disables this level)
+//  number_slots_1024 - number of slots for ML-KEM-1024 (0 disables this level)
+// Returns:
+//  Pointer to the initialized encapsulation pool on success
+//  Error result from err_create_encaps_pool() on failure (NULL in the userspace port)
+// Behavior:
+//  - Creates separate reusable encapsulation slots for the requested security levels
+//  - Allocates per-slot contexts and working buffers for polynomial and byte operations
+//  - Initializes atomic slot availability flags through the pool setup routine
+//  - Destroys the partially initialized pool if any setup step fails
+// Notes:
+//  - At least one security level must have a non-zero number of slots
+//  - Each security level supports at most ML_KEM_MAX_POOL_SLOTS slots
+//  - The caller must destroy the returned pool using ml_kem_encaps_pool_destroy()
 struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024)
 {
+	// Reject an empty pool configuration
 	if(number_slots_512 == 0 && number_slots_768 == 0 && number_slots_1024 == 0) { return err_create_encaps_pool(-ML_KEM_EINVAL); }
+	// Validate the maximum number of slots for each security level
 	else if(number_slots_512 > ML_KEM_MAX_POOL_SLOTS 
 		|| number_slots_768 > ML_KEM_MAX_POOL_SLOTS 
 			|| number_slots_1024 > ML_KEM_MAX_POOL_SLOTS) { return err_create_encaps_pool(-ML_KEM_EINVAL); }
 			
+	// Allocate and zero-initialize the pool descriptor
 	struct ml_kem_pool_encaps_ctx *ctx;
 	ctx = ml_kem_alloc(sizeof(struct ml_kem_pool_encaps_ctx));
 	if(!ctx) { return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 	ml_kem_memzero(ctx, sizeof(struct ml_kem_pool_encaps_ctx));
 	int ret = 0;
 	
+	// Initialize the ML-KEM-512 subpool if requested
 	if(number_slots_512 != 0)
 	{
+		// Allocate slot descriptors, contexts, and initialize slot availability
 		ret = ml_kem_create_all_structs(ctx, ML_KEM_512, number_slots_512);
 		if(ret != 0) {  ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 		
+		// Allocate and assign per-slot u16 polynomial buffers
 		ret = ml_kem_assign_encaps_pool_u16_buffers(ctx, ML_KEM_512, number_slots_512);
 		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 		
+		// Allocate and assign public key, ciphertext, and XOF byte buffers
 		ret = ml_kem_assign_encaps_pool_u8_buffers(ctx, ML_KEM_512, number_slots_512);
 		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 	}
 	
+	// Initialize the ML-KEM-768 subpool if requested
 	if(number_slots_768 != 0)
 	{
+		// Allocate slot descriptors, contexts, and initialize slot availability
 		ret = ml_kem_create_all_structs(ctx, ML_KEM_768, number_slots_768);
 		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 		
+		// Allocate and assign per-slot u16 polynomial buffers
 		ret = ml_kem_assign_encaps_pool_u16_buffers(ctx, ML_KEM_768, number_slots_768);
 		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 		
+		// Allocate and assign public key, ciphertext, and XOF byte buffers
 		ret = ml_kem_assign_encaps_pool_u8_buffers(ctx, ML_KEM_768, number_slots_768);
 		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 	}
 	
+	// Initialize the ML-KEM-1024 subpool if requested
 	if(number_slots_1024 != 0)
 	{
+		// Allocate slot descriptors, contexts, and initialize slot availability
 		ret = ml_kem_create_all_structs(ctx, ML_KEM_1024, number_slots_1024);
 		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 		
+		// Allocate and assign per-slot u16 polynomial buffers
 		ret = ml_kem_assign_encaps_pool_u16_buffers(ctx, ML_KEM_1024, number_slots_1024);
 		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 		
+		// Allocate and assign public key, ciphertext, and XOF byte buffers
 		ret = ml_kem_assign_encaps_pool_u8_buffers(ctx, ML_KEM_1024, number_slots_1024);
 		if(ret != 0) { ml_kem_encaps_pool_destroy(ctx); return err_create_encaps_pool(-ML_KEM_ENOMEM); }
 	}
 	
+	// Return the initialized pool with all requested subpools ready for reuse
 	return ctx;
 }
 
-// Моя примітка: деструктор пулу інкапсуляцій (в фінальному релізі буде додано ноармальнй опис в коментарях) 
+// Destroy a reusable encapsulation pool and release its allocated memory.
+// Parameters:
+//  ctx - encapsulation pool created by create_encaps_pool()
+// Returns:
+//  Nothing (void)
+// Behavior:
+//  - Releases the allocated resources of the ML-KEM-512, ML-KEM-768, and ML-KEM-1024 subpools
+//  - Wipes encapsulation contexts and contiguous u16/u8 working buffers before freeing them
+//  - Frees slot descriptor arrays and the main pool structure
+//  - Checks each allocation pointer to support partially initialized pools
+// Notes:
+//  - Safe to call with NULL
+//  - The caller must ensure no other thread is using the pool during destruction
+//  - Slot descriptors and the main pool structure are freed without explicit zeroization
 void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx)
 {
+	// No resources to release if the pool pointer is NULL
 	if(!ctx) { return; }
 	
-	// Delete all 512 level mem
+	// Destroy the ML-KEM-512 subpool
+	// Wipe and free its contiguous array of encapsulation contexts
 	if(ctx->ml_kem_pool_512 && ctx->ml_kem_pool_512->encaps_ctx) 
 	{ 
 		ml_kem_memzero(ctx->ml_kem_pool_512->encaps_ctx, sizeof(struct ml_kem_encaps_ctx) * ctx->ml_kem_pool_count_512);
 		ml_kem_free(ctx->ml_kem_pool_512->encaps_ctx); 
 	}
 	
+	// Free the slot descriptor array
 	if(ctx->ml_kem_pool_512) { ml_kem_free(ctx->ml_kem_pool_512); }
 	
+	// Wipe and free the contiguous u16 polynomial working buffers
 	if(ctx->all_u16_mem_512) 
 	{ 
 		ml_kem_memzero(ctx->all_u16_mem_512, (sizeof(u16) * (ML_KEM_512 * 3 + 2) * ML_KEM_N) * ctx->ml_kem_pool_count_512);
 		ml_kem_free(ctx->all_u16_mem_512); 
 	}
 	
+	// Wipe and free the public key, ciphertext, and XOF byte buffers
 	if(ctx->all_u8_mem_512) 
 	{ 
 		ml_kem_memzero(ctx->all_u8_mem_512, (RES_PUBL_PART_LVL_512 + LEN_CIPHERTEXT_512 + ML_KEM_MATRIX_XOF_BYTES) * ctx->ml_kem_pool_count_512);
 		ml_kem_free(ctx->all_u8_mem_512); 
 	}
 	
-	// Delete all 768 level mem
+	// Destroy the ML-KEM-768 subpool
+	// Wipe and free its contiguous array of encapsulation contexts
 	if(ctx->ml_kem_pool_768 && ctx->ml_kem_pool_768->encaps_ctx) 
 	{ 
 		ml_kem_memzero(ctx->ml_kem_pool_768->encaps_ctx, sizeof(struct ml_kem_encaps_ctx) * ctx->ml_kem_pool_count_768);
 		ml_kem_free(ctx->ml_kem_pool_768->encaps_ctx); 
 	}
 	
+	// Free the slot descriptor array
 	if(ctx->ml_kem_pool_768) { ml_kem_free(ctx->ml_kem_pool_768); }
 	
+	// Wipe and free the contiguous u16 polynomial working buffers
 	if(ctx->all_u16_mem_768) 
 	{ 
 		ml_kem_memzero(ctx->all_u16_mem_768, (sizeof(u16) * (ML_KEM_768 * 3 + 2) * ML_KEM_N) * ctx->ml_kem_pool_count_768);
 		ml_kem_free(ctx->all_u16_mem_768); 
 	}
 	
+	// Wipe and free the public key, ciphertext, and XOF byte buffers
 	if(ctx->all_u8_mem_768) 
 	{ 
 		ml_kem_memzero(ctx->all_u8_mem_768, (RES_PUBL_PART_LVL_768 + LEN_CIPHERTEXT_768 + ML_KEM_MATRIX_XOF_BYTES) * ctx->ml_kem_pool_count_768);
 		ml_kem_free(ctx->all_u8_mem_768);
 	}
 	
-	// Delete all 1024 level mem
+	// Destroy the ML-KEM-1024 subpool
+	// Wipe and free its contiguous array of encapsulation contexts
 	if(ctx->ml_kem_pool_1024 && ctx->ml_kem_pool_1024->encaps_ctx) 
 	{ 
 		ml_kem_memzero(ctx->ml_kem_pool_1024->encaps_ctx, sizeof(struct ml_kem_encaps_ctx) * ctx->ml_kem_pool_count_1024);
 		ml_kem_free(ctx->ml_kem_pool_1024->encaps_ctx); 
 	}
 	
+	// Free the slot descriptor array
 	if(ctx->ml_kem_pool_1024) { ml_kem_free(ctx->ml_kem_pool_1024); }
 	
+	// Wipe and free the contiguous u16 polynomial working buffers
 	if(ctx->all_u16_mem_1024) 
 	{ 
 		ml_kem_memzero(ctx->all_u16_mem_1024, (sizeof(u16) * (ML_KEM_1024 * 3 + 2) * ML_KEM_N) * ctx->ml_kem_pool_count_1024);
 		ml_kem_free(ctx->all_u16_mem_1024); 
 	}
 	
+	// Wipe and free the public key, ciphertext, and XOF byte buffers
 	if(ctx->all_u8_mem_1024) 
 	{ 
 		ml_kem_memzero(ctx->all_u8_mem_1024, (RES_PUBL_PART_LVL_1024 + LEN_CIPHERTEXT_1024 + ML_KEM_MATRIX_XOF_BYTES) * ctx->ml_kem_pool_count_1024);
 		ml_kem_free(ctx->all_u8_mem_1024); 
 	}
 	
+	// Release the main pool descriptor after all subpools are destroyed
 	ml_kem_free(ctx);
 }
 
