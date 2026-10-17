@@ -15,10 +15,6 @@
 #define SIZE_POOL_768  8
 #define SIZE_POOL_1024 8
 
-u8 ct[LEN_CIPHERTEXT_1024];
-u8 pk[RES_PUBL_PART_LVL_1024];
-u8 ss[ML_KEM_SEED_BYTES];
-
 struct decaps_thread_args {
     struct ml_kem_pool_decaps_ctx *pool;
     u8 *ciphertext;
