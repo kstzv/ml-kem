@@ -332,6 +332,9 @@ STATIC void ml_kem_create_vector_poly(struct ml_kem_temp *temp)
 		// Clear temporary XOF output before reusing the buffer
 		ml_kem_memzero(temp->raw_bytes, temp->number_raw_bytes_vectors);
 	}
+	
+	// Clear seed in this func
+	ml_kem_memzero(local_seed, ML_KEM_SEED_BYTES + 1);
 }
 
 // Generate public key vector t = A * s + e (in NTT domain)

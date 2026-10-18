@@ -337,6 +337,9 @@ STATIC void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 		// Transform polynomial to NTT domain
 		ml_kem_ntt_fips203(ctx->y + i * ML_KEM_N);
 	}
+	
+	// Clear seed in this func
+	ml_kem_memzero(inside_seed, ML_KEM_SEED_BYTES + 1);
 }
 		
 // Compute vector u during encapsulation:
