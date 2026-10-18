@@ -1,29 +1,44 @@
-> [!WARNING]
-**UNDER ACTIVE REFACTORING — DEVELOPMENT VERSION IS UNSTABLE**
+# Implementation of the ML-KEM 
 
-This project is currently undergoing major refactoring. The current source code in the repository may contain bugs, regressions, and incomplete functionality.
+Implementation of ML-KEM (FIPS 203) written in C11.
 
-**Do not use the current development branch in production.**
+This directory contains the portable ML-KEM core implementation used as the foundation for all supported environment-specific ports.
 
-**Previously identified security issue:** The incomplete zeroization of sensitive cryptographic material has been fixed in the current development code. However, previously published releases may still contain this vulnerability.
+All tests of this implementation are in `portable/tests/`.
 
-Until the refactoring is completed and a new stable release is published, this implementation should be used for research and testing purposes only.
+## Security and Versioning
 
-# ML-KEM (FIPS 203) — Pure C Implementation
+For security-sensitive applications, **it is strongly recommended to use the latest stable release** of this implementation.
 
-A low-level implementation of the ML-KEM (Kyber) post-quantum key encapsulation mechanism, written in pure C.
+Older versions may contain bugs or security vulnerabilities that have been identified and addressed in subsequent releases.
 
-This project focuses on correctness, transparency, architectural clarity and predictable resource usage.
+The latest stable release incorporates the most recent security fixes, corrections, and improvements. However, using the latest version does not guarantee the absence of vulnerabilities.
 
-## 📌 Overview
+This implementation has not undergone a formal independent security audit
 
-The implementation focuses on architectural clarity, portability, and explicit memory control.
+---
 
-The project is organized as a portable implementation with environment-specific ports, allowing the same cryptographic core to be reused across different platforms.
+## Overview
 
-The design avoids external dependencies and introduces a custom decapsulation pool to reduce allocation overhead and improve performance in constrained or kernel environments.
+This implementation provides the complete ML-KEM cryptographic core, including:
 
-The implementation follows standard C semantics to simplify porting across different platforms.
+- Key generation
+- Encapsulation
+- Decapsulation
+
+Design priorities:
+
+- minimal external dependencies
+- explicit memory management
+- architectural clarity
+- portability
+- minimal abstraction overhead
+
+The code is structured to be:
+
+- easy to audit
+- easy to port (e.g. kernel / embedded)
+- suitable for experimentation and research
 
 ---
 
@@ -76,257 +91,126 @@ This organization is intentional. It supports explicit memory management, predic
 
 ---
 
-## ⚠️ Status
+## Source Modules and Contexts
 
-### Portable core
+The implementation is divided into the following modules:
 
-Stable (v1.4.0)
-
-The portable ML-KEM core is shared across all supported environments and is the primary implementation maintained by the project.
-
-### Linux userspace port
-
-Stable
-
-The Linux userspace port is extensively tested and serves as the primary environment for comprehensive validation and performance benchmarking.
-
-Validated using:
-
-✔ NIST KAT tests (key generation & encapsulation)
-
-✔ End-to-end decapsulation validation
-
-✔ dudect constant-time leakage testing
-
-✔ Stress testing of the decapsulation pool
-
-✔ Invalid ciphertext handling tests
-
-✔ Input validation and error-handling tests
-
-✔ ASAN / TSAN / Valgrind testing
-
-✔ Multi-million iteration stress tests
-
-✔ GCC and Clang testing
-
-### Linux kernel port
-
-Tested
-
-The Linux kernel port integrates the same portable ML-KEM core into the Linux kernel environment through a platform-specific port layer.
-
-Validated using:
-
-✔ Successful kernel build
-
-✔ Module load/unload testing
-
-✔ Functional ML-KEM testing in kernel space
-
-✔ Reuse of the common portable cryptographic core
-
-### FreeRTOS port
-
-Tested
-
-The FreeRTOS port integrates the same portable ML-KEM core into an RTOS environment through a platform-specific port layer.
-
-The reference FreeRTOS configuration has been successfully built and tested using QEMU with repeated end-to-end ML-KEM operations.
-
-Detailed platform configurations and testing information are documented in the corresponding port directories.
-
-### Notes
-
-The project provides a portable cryptographic core with tested integrations across userspace, kernel-space, and RTOS environments.
-
-Additional testing on other architectures, toolchains, and platforms is encouraged.
-
-No formal third-party security audit has been performed.
----
-
-## 🎯 Goals
-
-- Provide a **clean, readable implementation** of ML-KEM (FIPS 203)
-- Maintain **strict control over memory and data flow**
-- Avoid external dependencies (including crypto libraries)
-- Enable straightforward porting across different execution environments
-
----
-
-## ✨ Features
-
-- Pure C (C11), no external libraries
-- Zero-dependency cryptographic core
-- Own implementations of:
-  - SHA3-256 / SHA3-512
-  - SHAKE128 / SHAKE256
-  - Keccak-f[1600]
-- Full polynomial arithmetic:
-  - NTT / inverse NTT
-  - Barrett reduction
-- ML-KEM components:
-  - Key generation
-  - Encapsulation
-  - Decapsulation
-- Memory pool for decapsulation contexts (lock-free with atomics)
-- Designed for portability across different execution environments
-
-## 🔧 Ongoing Work
-
- - Extended multi-architecture and toolchain validation
- - Additional compiler and optimization-level testing
- - Performance and memory optimization
- - Fuzzing and long-term robustness testing
- - External security review and independent validation
- - Documentation improvements
- - Additional platform ports where useful
-
-### 🔧 Hardware Acceleration (Exploration)
-
-Potential future investigation of hardware-assisted acceleration paths includes:
-
-- CPU-specific optimizations (e.g. SIMD and specialized instruction sets)
-- Platform-provided cryptographic accelerators
-- Optional hardware backend abstraction layers
-- Analysis of constant-time implications of hardware-assisted paths
-
-Any hardware-specific optimization should preserve the portability of the cryptographic core and avoid introducing mandatory platform dependencies.
-
----
-
-## 🧱 Project Structure
-
-- **portable/**
-  - **src/** — Core portable ML-KEM implementation
-  - **benchmarks/** — Performance evaluation and implementation comparisons
-  - **tests/** — Functional, security and robustness tests
-  - **ports/**
-    - **userspace/** — Linux userspace integration
-    - **linux_kernel/** — Linux kernel integration
-    - **freertos/** - FreeRTOS integration
-
----
-
-## 🧠 Architecture Overview
+| File | Description |
+|------|------------|
+| `ml_kem.c` | Public API layer |
+| `ml_kem_core_header.h` | Core definitions, constants, and structures |
+| `ml_kem_create_keys.c` | Key generation |
+| `ml_kem_encaps.c` | Encapsulation logic |
+| `ml_kem_decrypt.c` | Internal decryption stage used during decapsulation |
+| `ml_kem_ntt_main.c` | NTT and polynomial operations |
+| `ml_kem_sha3.c` | SHA3-256 / SHA3-512 |
+| `ml_kem_shake.c` | SHAKE128 / SHAKE256 |
+| `keccak1600.c` | Keccak permutation |
+| `ml_kem_pool.c` | Decapsulation pool implementation |
+| `ml_kem_encaps_pool.c` | Encapsulation pool implementation |
 
 The implementation is built around explicit context structures:
 
 - `ml_kem_ctx` — persistent key material
-- `ml_kem_temp` — temporary buffers for key generation
+- `ml_kem_temp` — temporary key generation buffers
 - `ml_kem_encaps_ctx` — encapsulation context
-- `ml_kem_decrypt_ctx` — decapsulation context
+- `ml_kem_decrypt_ctx` — decryption context
+- `ml_kem_decaps_ctx` — one slot context (decapsulation)
 - `ml_kem_pool_decaps_ctx` — pool of reusable decapsulation slots
+- `ml_kem_pool_encaps_ctx` — pools of reusable encapsulation slots (separate pools for ML-KEM-512, ML-KEM-768, and ML-KEM-1024)
 
-Key design ideas:
+Key principles:
 
-- Separation of **persistent vs temporary memory**
-- Avoidance of hidden allocations
-- Explicit lifecycle control (alloc / wipe / destroy)
-- Minimal abstraction overhead
-
----
-
-## 🔐 Security Considerations
-
-- No secret-dependent branching in critical cryptographic paths (where applicable)
-- Constant-time oriented implementation design
-- Explicit memory zeroization (`ml_kem_memzero`)
-- Separation of public and secret data flows
-- Constant-time selection logic for decapsulation fallback handling
-- Designed to minimize secret-dependent behavior across cryptographic operations
-
-Validation performed on tested x86-64 environments includes:
-
-- ✔ dudect constant-time leakage testing
-- ✔ GCC and Clang testing
-- ✔ ASAN / TSAN / Valgrind validation
-- ✔ Stress testing and malformed ciphertext testing
-- ✔ Input validation and error-handling tests
-
-⚠️ However:
-
-- Constant-time behavior is not formally proven
-- Compiler optimizations may still affect generated machine code
-- Additional validation on other architectures and toolchains is encouraged
-- No formal third-party security audit has been performed
----
-
-## 🧪 Testing
-
-The implementation includes dedicated test suites covering correctness, robustness, concurrency, memory safety, and constant-time behavior.
-
-Implemented test categories include:
-
-### ✔ NIST KAT Validation
-- Key generation KAT tests
-- Encapsulation KAT tests
-- End-to-end decapsulation validation
-
-### ✔ Constant-Time Validation
-- dudect testing for primary secret-dependent execution paths
-- Validation of decapsulation logic
-- Validation of polynomial arithmetic and modular operations
-- Validation of SHA3 / SHAKE wrapper usage
-- GCC and Clang testing
-
-### ✔ Stress Testing
-- Multi-million iteration stress tests
-- High-contention decapsulation pool testing
-- Multi-thread validation using atomic slot management
-
-### ✔ Memory Safety Validation
-- AddressSanitizer (ASAN)
-- ThreadSanitizer (TSAN)
-- Valgrind memory analysis
-
-### ✔ Robustness Testing
-- Invalid ciphertext handling tests
-- Decapsulation fallback (`z`) logic validation
-- Input validation and error-handling tests
-
-### ✔ Kernel Validation
-- Linux kernel module builds successfully
-- Kernel module load/unload validation
-- Functional testing of the ML-KEM implementation port in kernel space
-
-### ✔ FreeRTOS Validation
-- FreeRTOS integration and build validation
-- Functional ML-KEM testing under FreeRTOS
-- Repeated end-to-end key generation, encapsulation, and decapsulation testing
-- Reference testing on Arm Cortex-M3 under QEMU
-
-Detailed reproducible test setups and instructions are available in the `tests/` directory and its subdirectories.
+- strict separation of persistent and temporary data
+- no hidden allocations in core logic
+- explicit allocation / wipe / destroy lifecycle
+- contiguous memory layout for performance and locality
 
 ---
 
-## Performance Evaluation
+## Features
 
-Reproducible benchmark procedures, throughput measurements, stack usage analysis, memory usage measurements and PQClean comparisons are documented in:
+- Pure C (C11)
+- No external crypto libraries
+- Own implementations of:
+  - Keccak-f[1600]
+  - SHA3-256 / SHA3-512 
+  - SHAKE128 / SHAKE256
+- Full ML-KEM pipeline:
+  - Key generation
+  - Encapsulation
+  - Decapsulation
+- Polynomial arithmetic:
+  - NTT / inverse NTT
+  - Barrett reduction
+- Decapsulation pool:
+  - reusable slot contexts
+  - lock-free slot acquisition
+  - reduced allocation overhead
+- Encapsulation pool with reusable per-level slots
+- No runtime allocations during decapsulation or pooled encapsulation
+- Small stack footprint
+- Constant-time oriented design
 
-     portable/benchmarks/README.md
-     
-## ⚙️ Platform Support
-
-Platform-specific integration, build instructions, and configuration details are documented in the corresponding port directories:
-
-- Linux userspace: portable/ports/userspace/README.md
-- Linux kernel: portable/ports/linux_kernel/README.md
-- FreeRTOS: portable/ports/freertos/README.md
-
-For information about porting the implementation to a new environment, see:
-
-- Porting guide: portable/ports/PORTING.pdf
-
+  
 ---
 
-## 📌 Notes
+## Public API
 
-- This project intentionally avoids external crypto libraries.
-- If your compiler aggressively optimizes memory operations,
-  consider replacing `ml_kem_memzero()` with a platform-specific secure wipe.
+The public API is declared in `ml_kem.h`. Main entry points:
 
----
+```c
+struct ml_kem_pool_decaps_ctx *ml_kem_create_object(
+    enum ml_kem_k level, size_t ml_kem_pool_count,
+    ml_kem_entropy_fn entropy);
+
+void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
+
+struct ml_kem_pool_encaps_ctx *create_encaps_pool(
+    size_t number_slots_512, size_t number_slots_768,
+    size_t number_slots_1024);
+
+void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
+
+int ml_kem_encaps_core(
+    struct ml_kem_pool_encaps_ctx *ctx_pool,
+    u8 *pk, size_t size_pk,
+    u8 *buffer_ct, size_t size_ct,
+    u8 *buffer_ss, size_t size_ss,
+    ml_kem_entropy_fn entropy);
+
+int ml_kem_decaps_core(
+    struct ml_kem_pool_decaps_ctx *pool,
+    u8 *ciphertext, size_t len_ciphertext,
+    u8 *result, size_t len_result);
+
+int ml_kem_get_public_key(
+    struct ml_kem_pool_decaps_ctx *pool,
+    u8 *buffer_for_public_key, size_t size_buffer);
+```
+
+`ml_kem_create_object()` creates a key pair and a reusable decapsulation pool for the selected security level. `create_encaps_pool()` optionally creates reusable encapsulation slots for one or more security levels. Pass `NULL` as the `ctx_pool` argument to `ml_kem_encaps_core()` to encapsulate without a preallocated encapsulation pool.
+
+The `entropy` callback can be `NULL` to use the platform-provided random source. The public key and ciphertext buffer lengths must match the selected ML-KEM level; the shared-secret buffer must be 32 bytes.
+
+## Getting Started
+
+The portable ML-KEM core is located in portable/src/
+
+To build or integrate the library, use one of the available environment-specific ports located in:
+
+portable/ports/
+
+Each port provides its own build system, integration layer, and usage documentation.
+
+## Tests
+
+The test suite for this implementation is located in
+[`portable/tests/`](portable/tests/).
+
+For information about the available tests, how to
+build and run them, and any test-specific requirements,
+refer to the README in that directory.
 
 ## License
 
@@ -336,12 +220,6 @@ This project is dual-licensed under:
 - MIT License
 
 You may choose either license.
-
----
-
-## 🤝 Contributing
-
-Feedback, reviews, and suggestions are welcome.
 
 ---
 

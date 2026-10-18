@@ -13,7 +13,7 @@ API robustness,
 deterministic fallback behavior of ML-KEM decapsulation,
 compiler-dependent behavior under optimization.
 
-#Purpose
+# Purpose
 
 This test suite validates the portable ML-KEM core implementation located in `portable/src`.
 
@@ -45,7 +45,7 @@ Most tests are intentionally separated into independent categories to simplify d
 | test_encapsulation | Encapsulation validation |
 | test_decapsulation | End-to-end decapsulation tests |
 | test_dudect_ml_kem | Constant-time leakage testing using dudect |
-| test_memory_leak | ASAN / Valgrind leak testing |
+| test_memory_safety | ASAN / LSAN / TSAN / MSAN / UBSAN |
 | test_pool | Stress testing of decapsulation pool |
 | test_input_validation | Negative and validation tests |
 | test_stress_ml_kem | Large-scale stress and reliability testing |
@@ -55,7 +55,7 @@ Most tests are intentionally separated into independent categories to simplify d
 
 Directory:
 
-test_decapsulation_end_to_end/
+test_decapsulation/
 
 Purpose:
 
@@ -152,7 +152,7 @@ General workflow:
 4. Execute the generated binaries
 
 dudect project:
-https://github.com/oreparaz/dudect?utm_source=chatgpt.com
+https://github.com/oreparaz/dudect
 
 ### Why -O3 Is Used for dudect
 
@@ -193,7 +193,7 @@ stable API handling.
 
 Directory:
 
-test_invalid_ciphertext/
+test_invalid_ciphertexts/
 
 Purpose:
 
@@ -210,38 +210,37 @@ Special attention is given to deterministic behavior:
 
 identical malformed ciphertexts must produce identical fallback shared secrets.
 
-## 7. Memory Leak Tests
+## 7. Memory Safety and Sanitizer Tests
 
 Directory:
+test_memory_safety/
 
-test_memory_leak/
+### Purpose
 
-Purpose:
+Detection of memory safety violations, undefined behavior, and concurrency-related issues in the ML-KEM implementation.
 
-Detection of:
-memory leaks,
-invalid frees,
-heap corruption,
-use-after-free,
-stack corruption.
+The test suite uses five sanitizers:
 
-The tests are executed using:
+- **AddressSanitizer (ASan)** — detects out-of-bounds memory accesses, use-after-free, double-free, and other memory access violations. Run: `make asan`
+- **LeakSanitizer (LSan)** — detects memory leaks and unreleased allocations. Run: `make lsan`
+- **MemorySanitizer (MSan)** — detects the use of uninitialized memory. Run: `make msan`
+- **ThreadSanitizer (TSan)** — detects data races in concurrent execution. Run: `make tsan`
+- **UndefinedBehaviorSanitizer (UBSan)** — detects various forms of undefined behavior, including invalid shifts, signed integer overflow, and misaligned memory accesses. Run: `make ubsan`
 
-AddressSanitizer (ASAN),
-Valgrind.
+### Test Coverage
 
-Typical Valgrind flags:
+The tests focus on:
 
---leak-check=full
---show-leak-kinds=all
---track-origins=yes
---verbose
+- Repeated key generation and object destruction.
+- Repeated encapsulation and decapsulation operations.
+- Allocation and deallocation of reusable memory pools.
+- Concurrent operations and atomic slot management.
+- Resource cleanup and error-handling paths.
+- Memory safety under repeated and stress-test workloads.
 
-These tests focus on:
+Sanitizer configurations are executed separately where required by tool compatibility.
 
-repeated object creation/destruction,
-repeated encapsulation/decapsulation,
-stress allocation cycles.
+Run the corresponding Makefile targets from the test directory.
 
 ## 8. Decapsulation Pool Stress Tests
 
@@ -251,7 +250,7 @@ test_pool/
 
 Purpose:
 
-Validation of multithreaded decapsulation pool behavior under extreme contention.
+Validation of multithreaded decapsulation and encapsulation pools behavior under extreme contention.
 
 The tests use:
 
@@ -276,7 +275,7 @@ AddressSanitizer (ASAN).
 
 Directory:
 
-test_randomized_stress/
+test_stress_ml_kem/
 
 Purpose:
 
@@ -351,12 +350,12 @@ Clang.
 Other architectures and compiler configurations may require additional validation.
 
 # External References
-https://csrc.nist.gov/pubs/fips/203/final?utm_source=chatgpt.com
+https://csrc.nist.gov/pubs/fips/203/final
 
 https://github.com/C2SP/CCTV/tree/main/ML-KEM
 
-https://github.com/oreparaz/dudect?utm_source=chatgpt.com
+https://github.com/oreparaz/dudect
 
-https://llvm.org/?utm_source=chatgpt.com
+https://llvm.org/
 
-https://gcc.gnu.org/?utm_source=chatgpt.com
+https://gcc.gnu.org/
