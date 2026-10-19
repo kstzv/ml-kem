@@ -17,7 +17,7 @@ SRC = \
 		../../../../src/ml_kem_decrypt.c \
 		../../../../src/ml_kem_encaps.c \
 		../../../../src/ml_kem_ntt_main.c \
-		../../../../src/ml_kem_pool.c \
+		../../../../src/ml_kem_decaps_pool.c \
 		../../../../src/ml_kem_sha3.c \
 		../../../../src/ml_kem_shake.c \
 		../../../../src/ml_kem_encaps_pool.c
