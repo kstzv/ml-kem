@@ -47,7 +47,7 @@ void randombytes(u8 *x, size_t how_much)
 #define INPUT_SIZE (POLY_SIZE)
 
 // Structs keys and decrypt
-static struct ml_kem_pool_decaps_ctx *ctx = NULL;
+static struct ml_kem_general_keys_decaps_ctx *ctx = NULL;
 
 // To prevent the compiler from throwing out calculations
 static volatile u8 dudect_sink = 0;

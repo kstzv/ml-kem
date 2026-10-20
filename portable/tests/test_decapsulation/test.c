@@ -115,7 +115,7 @@ int main()
 			if(ret != ML_KEM_SEED_BYTES) { return -1; }
 			
 			// Create ML-KEM context with decapsulation pool
-			struct ml_kem_pool_decaps_ctx *this_ctx;
+			struct ml_kem_general_keys_decaps_ctx *this_ctx;
 			this_ctx = ml_kem_create_object(k, NUMBER_SLOTS, NULL);
 			
 			u8 pk[RES_PUBL_PART_LVL_1024];

@@ -17,7 +17,7 @@ int main(void)
     {
         int ret = -1;
 
-        struct ml_kem_pool_decaps_ctx *ctx;
+        struct ml_kem_general_keys_decaps_ctx *ctx;
         ctx = ml_kem_create_object(ML_KEM_768, SLOTS, NULL);
         if(!ctx)
         {

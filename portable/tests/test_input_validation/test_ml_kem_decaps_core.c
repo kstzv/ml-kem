@@ -15,15 +15,15 @@ int main(void)
 	
 	srand((unsigned)time(NULL));
    
-    struct ml_kem_pool_decaps_ctx *ctx_512;
+    struct ml_kem_general_keys_decaps_ctx *ctx_512;
     ctx_512 = ml_kem_create_object(ML_KEM_512, SIZE_POOL, NULL);
     if(!ctx_512) { printf("Error in ml_kem_create_object() for ML_KEM_512\n"); return -1; }
     
-    struct ml_kem_pool_decaps_ctx *ctx_768;
+    struct ml_kem_general_keys_decaps_ctx *ctx_768;
     ctx_768 = ml_kem_create_object(ML_KEM_768, SIZE_POOL, NULL);
     if(!ctx_768) { printf("Error in ml_kem_create_object() for ML_KEM_768\n"); ret = -1; goto ex_1; }
     
-    struct ml_kem_pool_decaps_ctx *ctx_1024;
+    struct ml_kem_general_keys_decaps_ctx *ctx_1024;
     ctx_1024 = ml_kem_create_object(ML_KEM_1024, SIZE_POOL, NULL);
     if(!ctx_1024) { printf("Error in ml_kem_create_object() for ML_KEM_1024\n"); ret = -1; goto ex_2; }
     

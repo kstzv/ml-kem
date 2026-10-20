@@ -44,7 +44,7 @@ void ml_kem_atomic_init_slot(ml_kem_atomic_t *slot)
 // Error handling
 
 // Error in create keys
-struct ml_kem_pool_decaps_ctx *err_create_keys(const int err)
+struct ml_kem_general_keys_decaps_ctx *err_create_keys(const int err)
 {
 	if(err == -ML_KEM_EINVAL) { return ERR_PTR(-EINVAL); }
 	else if( err == -ML_KEM_ENOMEM) { return ERR_PTR(-ENOMEM); }

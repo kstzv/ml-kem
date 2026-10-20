@@ -4,16 +4,16 @@
 #include "ml_kem.h"
 
 // Forward declarations of public API functions (redeclared for internal usage)
-struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
-void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
+struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
+void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx_pool);
 int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t size_pk, u8 *buffer_ct, size_t size_ct, u8 *buffer_ss, size_t size_ss, ml_kem_entropy_fn entropy);
-int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
-int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
+int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
+int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
 struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
 void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
 
 // Forward declarations of local function in this module
-STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
 
 // Full initialization routine:
 //  - Generates ML-KEM keypair
@@ -27,7 +27,7 @@ STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *
 // Notes:
 //  - Pool defines maximum parallel decapsulation operations for a single keypair
 //  - All key material is stored inside ctx_keys and shared across pool slots
-struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy)
+struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy)
 {
 	// Validate security level
 	if(level != ML_KEM_512 && level != ML_KEM_768 && level != ML_KEM_1024)
@@ -65,7 +65,7 @@ struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t 
 	ml_kem_destroy_temp_struct(temp_keys);
 	
 	// Allocate decapsulation pool (contains encaps + decrypt contexts per slot)
-	struct ml_kem_pool_decaps_ctx *ctx_pool;
+	struct ml_kem_general_keys_decaps_ctx *ctx_pool;
 	ctx_pool = ml_kem_alloc_decaps_pool(level, ml_kem_pool_count, ctx_keys);
 	if(!ctx_pool) { ret = -ML_KEM_ENOMEM; goto error_exit; }
 	
@@ -85,7 +85,7 @@ struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t 
 // Notes:
 //  - Safe to call with NULL
 //  - Assumes all slots share the same key context
-void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool)
+void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx_pool)
 {
 	if(!ctx_pool) { return; }
 	
@@ -229,7 +229,7 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 //  - Ciphertext comparison is done in constant time
 //  - Final key selection uses bitwise masking (no branches)
 //  - All sensitive buffers are wiped before releasing slot
-int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result)
+int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result)
 {
 	// Validate input pointers
 	if (!ciphertext || !result) { return err_decaps(-EINVAL); }
@@ -282,7 +282,7 @@ int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size
 }
 
 // Function to check the coincidence of ciphertexts after decrypt and re-encaps	
-STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot)
+STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot)
 {
 	// Step 3: Precompute fallback shared secret (z || c) → SHAKE256
 	// Used if ciphertext verification fails (CCA security requirement)
@@ -330,7 +330,7 @@ STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *
 // -pool           			- initialized decapsulation pool (contains the PK within the structure hierarchy)
 // -buffer_for_public_key   - buffer where the PK will be copied
 // -size_buffer      		- size of the buffer (must conform to the ML-KEM security level)
-int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer)
+int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer)
 {
 	// Validate pool and slot array
 	if(!pool || !pool->ml_kem_pool) { return err_decaps(-EINVAL); }

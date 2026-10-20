@@ -30,7 +30,7 @@
 // share the same decapsulation pool.
 struct decaps_thread_args {
     // Shared pool containing the keypair and reusable decapsulation slots
-    struct ml_kem_pool_decaps_ctx *pool;
+    struct ml_kem_general_keys_decaps_ctx *pool;
     // Worker-specific ciphertext to be decapsulated repeatedly
     u8 *ciphertext;
     // Actual ciphertext length for the selected ML-KEM level
@@ -50,7 +50,7 @@ struct encaps_thread_args {
     // Shared reusable encapsulation pool
     struct ml_kem_pool_encaps_ctx *pool;
     // Shared decapsulation pool used to verify each ciphertext
-    struct ml_kem_pool_decaps_ctx *decaps_pool;
+    struct ml_kem_general_keys_decaps_ctx *decaps_pool;
     // Per-thread ciphertext buffer sized for the largest ML-KEM variant
     u8 ciphertext[LEN_CIPHERTEXT_1024];
     // Ciphertext length for the selected security level
@@ -214,7 +214,7 @@ int func_test_decaps(enum ml_kem_k level)
 	pthread_t threads[NUMBER_THREADS];
 	struct decaps_thread_args ctx_decaps[NUMBER_THREADS];
 	// Create one keypair with a reusable decapsulation pool for all workers
-	struct ml_kem_pool_decaps_ctx *decaps_pool_ctx = ml_kem_create_object(level, number_pool, NULL);
+	struct ml_kem_general_keys_decaps_ctx *decaps_pool_ctx = ml_kem_create_object(level, number_pool, NULL);
 	if(!decaps_pool_ctx) { ret = -1; goto exit; }
 	
 	// Retrieve the matching serialized public key into the maximum-sized buffer
@@ -314,7 +314,7 @@ int func_test_encaps(enum ml_kem_k level)
 	pthread_t threads[NUMBER_THREADS];
 	struct encaps_thread_args ctx_encaps[NUMBER_THREADS];
 	// Create a matching keypair/decapsulation pool and all encapsulation subpools
-	struct ml_kem_pool_decaps_ctx *decaps_pool_ctx = ml_kem_create_object(level, number_pool, NULL);
+	struct ml_kem_general_keys_decaps_ctx *decaps_pool_ctx = ml_kem_create_object(level, number_pool, NULL);
 	struct ml_kem_pool_encaps_ctx *encaps_pool_ctx = create_encaps_pool(SIZE_POOL_512, SIZE_POOL_768, SIZE_POOL_1024);
 	if(!decaps_pool_ctx || !encaps_pool_ctx) { ret = -1; goto exit; }
 	
@@ -393,7 +393,7 @@ int func_test_pool_lifecycle(enum ml_kem_k level_decaps, size_t slots_decaps, si
         int success = 0;
 
         // Initialize pointers so cleanup is valid even after failed creation
-        struct ml_kem_pool_decaps_ctx *ctx_dec = NULL;
+        struct ml_kem_general_keys_decaps_ctx *ctx_dec = NULL;
         struct ml_kem_pool_encaps_ctx *ctx_enc = NULL;
 
         // Create the decapsulation pool and its associated key material

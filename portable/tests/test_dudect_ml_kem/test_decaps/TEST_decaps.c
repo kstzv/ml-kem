@@ -15,9 +15,9 @@
 #include "ml_kem.h"
 
 // IMPORTANT: In ml_kem.c temporarily remove static:
-// void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+// void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
 // or place this test in the same translation unit under #ifdef.
-void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
 
 
 // Deterministic RNG for dudect                                     
@@ -61,7 +61,7 @@ void randombytes(u8 *x, size_t how_much)
 #define INPUT_SIZE TEST_CIPHERTEXT_LEN
 
 // Minimal structures and buffers                                   
-static struct ml_kem_pool_decaps_ctx *pool_head;
+static struct ml_kem_general_keys_decaps_ctx *pool_head;
 enum ml_kem_k LVL = ML_KEM_1024;
 
 static u8 ciphertext_reference[TEST_CIPHERTEXT_LEN];

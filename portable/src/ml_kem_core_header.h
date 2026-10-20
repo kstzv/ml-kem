@@ -117,7 +117,7 @@ extern bool ml_kem_try_acquire_slot(ml_kem_atomic_t *slot);
 extern void ml_kem_release_slot(ml_kem_atomic_t *slot);
 extern void ml_kem_atomic_init_slot(ml_kem_atomic_t *slot);
 
-struct ml_kem_pool_decaps_ctx *err_create_keys(const int err);
+struct ml_kem_general_keys_decaps_ctx *err_create_keys(const int err);
 int err_encaps(const int err);
 int err_decaps(const int err);
 int err_get_pk(const int err);
@@ -198,7 +198,7 @@ struct ml_kem_decaps_ctx {
 };
 
 // Pool of decapsulation slots
-struct ml_kem_pool_decaps_ctx {
+struct ml_kem_general_keys_decaps_ctx {
 	struct ml_kem_decaps_ctx *ml_kem_pool; // Array of slots
 	size_t ml_kem_pool_count;              // Number of slots
 	
@@ -274,8 +274,8 @@ extern void ml_kem_shake256(u8 *out, size_t outlen, const u8 *in, size_t inlen);
 extern void keccak_f1600_ct(u64 state[25]);
 
 // Decapsulation pool API (File #9)
-extern struct ml_kem_pool_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, size_t ml_kem_pool_count, struct ml_kem_ctx *private_keys);
-extern void ml_kem_pool_destroy(struct ml_kem_pool_decaps_ctx *head_pool);
+extern struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, size_t ml_kem_pool_count, struct ml_kem_ctx *private_keys);
+extern void ml_kem_pool_destroy(struct ml_kem_general_keys_decaps_ctx *head_pool);
 
 // Encapsulation pool API (File #10)
 extern int ml_kem_create_all_structs(struct ml_kem_pool_encaps_ctx *ctx, enum ml_kem_k k, size_t number_slots);

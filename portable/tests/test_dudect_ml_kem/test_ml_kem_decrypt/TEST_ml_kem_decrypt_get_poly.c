@@ -49,7 +49,7 @@ void randombytes(u8 *x, size_t how_much)
 #define INPUT_SIZE  (SECRET_SIZE + U_SIZE + V_SIZE)
 
 // Structs keys and decrypt
-static struct ml_kem_pool_decaps_ctx *ctx = NULL;
+static struct ml_kem_general_keys_decaps_ctx *ctx = NULL;
 
 // Fixed secret для class 0
 static u16 fixed_secret[ML_KEM_N * ML_KEM_1024];

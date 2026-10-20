@@ -20,7 +20,7 @@
 // This isolates concurrency behavior from input variability
 
 struct thread_arg {
-    struct ml_kem_pool_decaps_ctx *pool;
+    struct ml_kem_general_keys_decaps_ctx *pool;
     u8 *ciphertext;
     size_t ciphertext_len;
     u8 *expected_secret;
@@ -76,7 +76,7 @@ int main(void)
     pthread_barrier_init(&barrier, NULL, THREADS);
 
     // Create decapsulation pool. Pool size is intentionally smaller than thread count to induce heavy contention
-    struct ml_kem_pool_decaps_ctx *pool = ml_kem_create_object(level, pool_size, NULL);
+    struct ml_kem_general_keys_decaps_ctx *pool = ml_kem_create_object(level, pool_size, NULL);
 
     if (!pool) 
     {

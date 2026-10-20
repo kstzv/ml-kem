@@ -14,11 +14,11 @@ int main(void)
     // Main test loop
 	for(size_t i = 0; i < LOOPS; i++)
 	{
-		struct ml_kem_pool_decaps_ctx *ctx_512;
-		struct ml_kem_pool_decaps_ctx *ctx_768;
-		struct ml_kem_pool_decaps_ctx *ctx_1024;
+		struct ml_kem_general_keys_decaps_ctx *ctx_512;
+		struct ml_kem_general_keys_decaps_ctx *ctx_768;
+		struct ml_kem_general_keys_decaps_ctx *ctx_1024;
 		
-		struct ml_kem_pool_decaps_ctx *ctx_wrong;
+		struct ml_kem_general_keys_decaps_ctx *ctx_wrong;
 		
 		size_t temp;
 		

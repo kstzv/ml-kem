@@ -80,7 +80,7 @@ int main(void)
     pthread_t threads[THREADS];
     struct thread_arg *args = NULL;
     size_t created = 0;
-    struct ml_kem_pool_decaps_ctx *decaps = NULL;
+    struct ml_kem_general_keys_decaps_ctx *decaps = NULL;
     struct ml_kem_pool_encaps_ctx *encaps = NULL;
     struct start_gate gate;
     u8 pk[RES_PUBL_PART_LVL_1024];

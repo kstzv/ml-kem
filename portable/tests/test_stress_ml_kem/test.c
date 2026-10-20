@@ -56,7 +56,7 @@ int main(void)
         }
 
         // Create pool and keys
-        struct ml_kem_pool_decaps_ctx *ctx_key;
+        struct ml_kem_general_keys_decaps_ctx *ctx_key;
         ctx_key = ml_kem_create_object(CURR_LVL, 1, NULL);
         if (!ctx_key) 
         {

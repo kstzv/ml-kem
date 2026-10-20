@@ -29,7 +29,7 @@ int main(void)
 	{
 		int ret = 0;
 		// Create valid ML-KEM objects
-		struct ml_kem_pool_decaps_ctx *ctx_512;
+		struct ml_kem_general_keys_decaps_ctx *ctx_512;
 		ctx_512 = ml_kem_create_object(ML_KEM_512, 2, NULL);
 		if(ctx_512 == NULL)
 		{
@@ -37,7 +37,7 @@ int main(void)
 			return -1;
 		}
 
-		struct ml_kem_pool_decaps_ctx *ctx_768;
+		struct ml_kem_general_keys_decaps_ctx *ctx_768;
 		ctx_768 = ml_kem_create_object(ML_KEM_768, 2, NULL);
 		if(ctx_768 == NULL)
 		{
@@ -46,7 +46,7 @@ int main(void)
 			goto ex_1;
 		}
 
-		struct ml_kem_pool_decaps_ctx *ctx_1024;
+		struct ml_kem_general_keys_decaps_ctx *ctx_1024;
 		ctx_1024 = ml_kem_create_object(ML_KEM_1024, 2, NULL);
 		if(ctx_1024 == NULL)
 		{

@@ -26,7 +26,7 @@
 // Notes:
 //  - The pool holds all persistent and per-slot contexts
 //  - Intended for repeated decapsulation operations
-struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
+struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
 
 
 // Destroy decapsulation pool object.
@@ -36,7 +36,7 @@ struct ml_kem_pool_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t 
 //  - Wipes sensitive data
 //  - Frees all associated memory
 // Safe to call with NULL.
-void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
+void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx_pool);
 
 // Encapsulation core (client-side API)
 // Parameters:
@@ -73,14 +73,14 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 //  - Implements full ML-KEM decapsulation flow:
 //      decrypt → re-encapsulate → verify → constant-time select
 //  - Output is always written in constant time
-int ml_kem_decaps_core(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
+int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 
 // Gets the public key
 // Parameters:
 // -pool           			- initialized decapsulation pool (contains the PK within the structure hierarchy)
 // -buffer_for_public_key   - buffer where the PK will be copied
 // -size_buffer      		- size of the buffer (must conform to the ML-KEM security level)
-int ml_kem_get_public_key(struct ml_kem_pool_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
+int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
 
 // Create and initialize a reusable encapsulation pool
 // Parameters:
@@ -105,7 +105,7 @@ void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
 // The following function are normally declared as `static` in their respective compilation units
 // It is exposed here ONLY for dudect-based constant-time analysis
 // WARNING: 1. Not part of the public API; 2. Not intended for external use;
-void ml_kem_decaps_ct_select_ss(struct ml_kem_pool_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
 
 #endif // ML_KEM_DUDECT_TEST
 

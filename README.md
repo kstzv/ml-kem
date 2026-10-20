@@ -160,11 +160,11 @@ Key principles:
 The public API is declared in `ml_kem.h`. Main entry points:
 
 ```c
-struct ml_kem_pool_decaps_ctx *ml_kem_create_object(
+struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object(
     enum ml_kem_k level, size_t ml_kem_pool_count,
     ml_kem_entropy_fn entropy);
 
-void ml_kem_destroy_core(struct ml_kem_pool_decaps_ctx *ctx_pool);
+void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx_pool);
 
 struct ml_kem_pool_encaps_ctx *create_encaps_pool(
     size_t number_slots_512, size_t number_slots_768,
@@ -180,12 +180,12 @@ int ml_kem_encaps_core(
     ml_kem_entropy_fn entropy);
 
 int ml_kem_decaps_core(
-    struct ml_kem_pool_decaps_ctx *pool,
+    struct ml_kem_general_keys_decaps_ctx *pool,
     u8 *ciphertext, size_t len_ciphertext,
     u8 *result, size_t len_result);
 
 int ml_kem_get_public_key(
-    struct ml_kem_pool_decaps_ctx *pool,
+    struct ml_kem_general_keys_decaps_ctx *pool,
     u8 *buffer_for_public_key, size_t size_buffer);
 ```
 

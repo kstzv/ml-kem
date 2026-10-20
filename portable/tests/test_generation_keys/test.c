@@ -107,7 +107,7 @@ int main()
 			if(ret != size_ek_counter) { return -1; }
 			
 			// Create ML-KEM context (includes key generation internally).
-			struct ml_kem_pool_decaps_ctx *this_ctx;
+			struct ml_kem_general_keys_decaps_ctx *this_ctx;
 			this_ctx = ml_kem_create_object(k, NUMBER_SLOTS, NULL);
 			
 			// Compare generated public key with NIST reference. Full byte-wise comparison ensures deterministic correctness.

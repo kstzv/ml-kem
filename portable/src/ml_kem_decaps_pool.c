@@ -6,18 +6,18 @@
 #include "ml_kem_core_header.h"
 
 // Cross-module function declarations
-struct ml_kem_pool_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, size_t ml_kem_pool_count, struct ml_kem_ctx *private_keys);
-void ml_kem_pool_destroy(struct ml_kem_pool_decaps_ctx *head_pool);
+struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, size_t ml_kem_pool_count, struct ml_kem_ctx *private_keys);
+void ml_kem_pool_destroy(struct ml_kem_general_keys_decaps_ctx *head_pool);
 bool try_acquire_slot(ml_kem_atomic_t *is_free);
 
 // Static (internal) helpers
-STATIC struct ml_kem_pool_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count);
+STATIC struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count);
 STATIC u16 *ml_kem_get_mem_two_bytes_ptrs_encaps(struct ml_kem_encaps_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level);
 STATIC u16 *ml_kem_get_mem_two_bytes_ptrs_decrypt(struct ml_kem_decrypt_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level);
 
 // Allocate and initialize the entire decapsulation pool.
 // This is the main entry point that prepares all memory required for parallel decapsulation.
-struct ml_kem_pool_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, size_t ml_kem_pool_count, struct ml_kem_ctx *private_keys)
+struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, size_t ml_kem_pool_count, struct ml_kem_ctx *private_keys)
 {
 	// Validate input parameters:
 	// - security level must be within defined ML-KEM levels
@@ -33,7 +33,7 @@ struct ml_kem_pool_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, siz
 	else if(level == ML_KEM_1024) { public_key_msg_len = RES_PUBL_PART_LVL_1024; ciphertext_len = LEN_CIPHERTEXT_1024; }
 	
 	// Allocate pool header + slot descriptors
-	struct ml_kem_pool_decaps_ctx *head_pool;
+	struct ml_kem_general_keys_decaps_ctx *head_pool;
 	head_pool = ml_kem_alloc_head_decaps_pool(ml_kem_pool_count);
 	if(!head_pool) { return NULL; }
 	
@@ -216,11 +216,11 @@ STATIC u16 *ml_kem_get_mem_two_bytes_ptrs_decrypt(struct ml_kem_decrypt_ctx *ctx
 // Allocate and initialize the pool head structure along with slot descriptors.
 // This function only allocates the "skeleton" of the pool (no heavy buffers yet).
 // All large memory regions are assigned later in ml_kem_alloc_decaps_pool().
-STATIC struct ml_kem_pool_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count)
+STATIC struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count)
 {
 	// Allocate pool head structure
-	struct ml_kem_pool_decaps_ctx *head_pool;
-	head_pool = ml_kem_alloc(sizeof(struct ml_kem_pool_decaps_ctx));
+	struct ml_kem_general_keys_decaps_ctx *head_pool;
+	head_pool = ml_kem_alloc(sizeof(struct ml_kem_general_keys_decaps_ctx));
 	if(!head_pool) { return NULL; }
 	
 	// Allocate array of slot descriptors (each slot = encaps + decrypt pair)
@@ -259,7 +259,7 @@ STATIC struct ml_kem_pool_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_ke
 // Important:
 // - Sensitive data is explicitly zeroed before freeing (best-effort secure wipe)
 // - Order of cleanup matches allocation dependencies
-void ml_kem_pool_destroy(struct ml_kem_pool_decaps_ctx *head_pool)
+void ml_kem_pool_destroy(struct ml_kem_general_keys_decaps_ctx *head_pool)
 {
 	// Validate input pointer
 	if(!head_pool) { return; }
