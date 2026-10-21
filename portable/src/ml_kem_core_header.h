@@ -76,6 +76,11 @@ typedef int (*ml_kem_entropy_fn)(void *buf, size_t len);
 #define LEN_CIPHERTEXT_768  1088
 #define LEN_CIPHERTEXT_1024 1568
 
+// Sekret key lengths (per security level)
+#define LEN_SK_512  1632
+#define LEN_SK_768  2400
+#define LEN_SK_1024 3168
+
 // Maximum number of slots in decapsulation pool
 #define ML_KEM_MAX_POOL_SLOTS 128
 
@@ -121,7 +126,8 @@ struct ml_kem_general_keys_decaps_ctx *err_create_keys(const int err);
 int err_encaps(const int err);
 int err_decaps(const int err);
 int err_get_pk(const int err);
-struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err); // Моя примітка: змінити тип обробки помилок цієї функції 
+struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err);
+int err_get_sk(const int err);
 
 // ML-KEM security level parameter k:
 // Defines matrix/vector dimensions:

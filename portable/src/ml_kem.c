@@ -11,9 +11,13 @@ int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *cipherte
 int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
 struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
 void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
+int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk);
 
 // Forward declarations of local function in this module
 STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+
+// Function for packing a secret vector
+STATIC size_t get_s_vector(const u16 *secret, u8 *buffer, enum ml_kem_k k);
 
 // Full initialization routine:
 //  - Generates ML-KEM keypair
@@ -333,10 +337,10 @@ STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *po
 int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer)
 {
 	// Validate pool and slot array
-	if(!pool || !pool->ml_kem_pool) { return err_decaps(-EINVAL); }
+	if(!pool || !pool->ml_kem_pool) { return err_get_pk(-EINVAL); }
 	
 	// Validate internal pool memory regions (must be preallocated)
-	if(!pool->ciphertexts_mem_ptr || !pool->public_key_msgs_mem_ptr || !pool->decrypt_mem_ptr || !pool->encaps_mem_ptr) { return err_decaps(-EINVAL); }
+	if(!pool->ciphertexts_mem_ptr || !pool->public_key_msgs_mem_ptr || !pool->decrypt_mem_ptr || !pool->encaps_mem_ptr) { return err_get_pk(-EINVAL); }
 	
 	// Validate buffer ptr
 	if(!buffer_for_public_key) { return err_get_pk(-EINVAL); }
@@ -533,6 +537,66 @@ void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx)
 	ml_kem_free(ctx);
 }
 
+// Function for retrieving a private key in a standard-compliant format
+// Parametrs:
+	// 1. Structure of the global context for keys and decapsulation
+	// 2. Pointer to buffer for message sk
+	// 3. Buffer size from the previous parameter
+// Return:
+	// Type int, number of bytes written to the buffer or an error code
+int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk)
+{
+	// Check got parametrs
+	if(!ctx || !ctx->ml_kem_pool || !ctx->ml_kem_pool->decrypt_ctx || !ctx->ml_kem_pool->decrypt_ctx->ctx 
+		|| !ctx->ml_kem_pool->decrypt_ctx->ctx->secret || !ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg || !buffer_for_sk) { return err_get_sk(-ML_KEM_EINVAL); }
+	
+	if(ctx->ml_kem_pool->decrypt_ctx->ctx->k != ML_KEM_512 && ctx->ml_kem_pool->decrypt_ctx->ctx->k != ML_KEM_768 &&
+		ctx->ml_kem_pool->decrypt_ctx->ctx->k != ML_KEM_1024) { return err_get_sk(-ML_KEM_EINVAL); }
+	
+	if(ctx->ml_kem_pool->decrypt_ctx->ctx->k == ML_KEM_512 
+		&& (size_buffer_for_sk < LEN_SK_512 
+			|| ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len != RES_PUBL_PART_LVL_512)) { return err_get_sk(-ML_KEM_EINVAL); }
+	else if(ctx->ml_kem_pool->decrypt_ctx->ctx->k == ML_KEM_768 
+		&& (size_buffer_for_sk < LEN_SK_768
+			|| ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len != RES_PUBL_PART_LVL_768)) { return err_get_sk(-ML_KEM_EINVAL); }
+	else if(ctx->ml_kem_pool->decrypt_ctx->ctx->k == ML_KEM_1024 
+		&& (size_buffer_for_sk < LEN_SK_1024
+			|| ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len != RES_PUBL_PART_LVL_1024)) { return err_get_sk(-ML_KEM_EINVAL); }
+	
+	// Get secret vector
+	size_t buff_ctr = 0;
+	buff_ctr = get_s_vector(ctx->ml_kem_pool->decrypt_ctx->ctx->secret, buffer_for_sk, ctx->ml_kem_pool->decrypt_ctx->ctx->k);
+	// Copy pk in bytes format and seed matrix
+	memcpy(buffer_for_sk + buff_ctr, ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg, ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len);
+	buff_ctr += ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len;
+	// Copy hash pk
+	memcpy(buffer_for_sk + buff_ctr, ctx->ml_kem_pool->decrypt_ctx->ctx->h_pk, ML_KEM_SEED_BYTES);
+	buff_ctr += ML_KEM_SEED_BYTES;
+	// Copy z
+	memcpy(buffer_for_sk + buff_ctr, ctx->ml_kem_pool->decrypt_ctx->ctx->z, ML_KEM_SEED_BYTES);
+	buff_ctr += ML_KEM_SEED_BYTES;
+	
+	return (int)buff_ctr;
+}
+
+// Function for packing a secret vector
+STATIC size_t get_s_vector(const u16 *secret, u8 *buffer, enum ml_kem_k k)
+{
+    size_t buff_ctr = 0;
+
+    for(size_t i = 0; i < k * ML_KEM_N; i += 2)
+    {
+        u16 c0 = secret[i];
+        u16 c1 = secret[i + 1];
+
+        buffer[buff_ctr++] = (u8)c0;
+        buffer[buff_ctr++] = (u8)((c0 >> 8) | (c1 << 4));
+        buffer[buff_ctr++] = (u8)(c1 >> 4);
+    }
+
+    return buff_ctr;
+}
+
 // For export in Linux kernel
 #ifdef LINUX_KERNEL
 
@@ -545,6 +609,7 @@ EXPORT_SYMBOL_GPL(ml_kem_encaps_core);
 EXPORT_SYMBOL_GPL(ml_kem_decaps_core);
 EXPORT_SYMBOL_GPL(create_encaps_pool);
 EXPORT_SYMBOL_GPL(ml_kem_encaps_pool_destroy);
+EXPORT_SYMBOL_GPL(ml_kem_get_sk);
 
 #endif
 

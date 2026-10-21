@@ -99,13 +99,27 @@ struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_
 //  Nothing (void)
 void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
 
+// Function for retrieving a private key in a standard-compliant format
+// Parametrs:
+	// 1. Structure of the global context for keys and decapsulation
+	// 2. Pointer to buffer for message sk
+	// 3. Buffer size from the previous parameter
+// Return:
+	// Type int, number of bytes written to the buffer or an error code
+int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk);
+
 #ifdef ML_KEM_DUDECT_TEST 
 
-// INTERNAL FUNCTION EXPOSED FOR TESTING
-// The following function are normally declared as `static` in their respective compilation units
+// INTERNAL FUNCTIONS EXPOSED FOR TESTING
+// The following functions are normally declared as `static` in their respective compilation units
 // It is exposed here ONLY for dudect-based constant-time analysis
 // WARNING: 1. Not part of the public API; 2. Not intended for external use;
+
+// Forward declarations of local function in this module
 void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+
+// Function for packing a secret vector
+STATIC size_t get_s_vector(const u16 *secret, u8 *buffer, enum ml_kem_k k);
 
 #endif // ML_KEM_DUDECT_TEST
 
