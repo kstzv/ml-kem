@@ -98,3 +98,6 @@ struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err)
 	(void)err;
 	return NULL;
 }
+
+// Error in get private key
+int err_get_sk(const int err) { return err; }

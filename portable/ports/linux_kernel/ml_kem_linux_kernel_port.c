@@ -70,3 +70,6 @@ struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err)
 	else if( err == -ML_KEM_ENOMEM) { return ERR_PTR(-ENOMEM); }
 	else { return ERR_PTR(-EFAULT); }
 }
+
+// Error in get private key
+int err_get_sk(const int err) { return err; }

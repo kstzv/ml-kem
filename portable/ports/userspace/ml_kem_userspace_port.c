@@ -75,7 +75,7 @@ int err_encaps(const int err) { return err; }
 // Error in decaps
 int err_decaps(const int err) { return err; }
 
-// Error in get poublic key
+// Error in get public key
 int err_get_pk(const int err) { return err; }
 
 // Error in create pool for encapsulation
@@ -84,3 +84,6 @@ struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err)
 	(void)err;
 	return NULL;
 }
+
+// Error in get private key
+int err_get_sk(const int err) { return err; }
