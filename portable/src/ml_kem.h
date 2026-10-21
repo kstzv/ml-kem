@@ -28,6 +28,14 @@
 //  - Intended for repeated decapsulation operations
 struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
 
+// This function creates a global key and decapsulation context based on a received message containing a private key. The message format must comply with the standard
+// Parametrs:
+	// 1. Pointer to buffer with message sk
+	// 2. Buffer size from the previous parameter
+	// 3. Buffer for maximum execution parallelism per key during decapsulation (if parallelism within the decapsulation stream is not required, specify 1 as the default)
+// Return:
+	// `struct ml_kem_general_keys_decaps_ctx *` structure of the global context for keys and decapsulation
+struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object_from_imported_sk(u8 *sk, size_t size_sk, size_t size_pool);
 
 // Destroy decapsulation pool object.
 // Parameters:
@@ -82,6 +90,15 @@ int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *cipherte
 // -size_buffer      		- size of the buffer (must conform to the ML-KEM security level)
 int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
 
+// Function for retrieving a private key in a standard-compliant format
+// Parametrs:
+	// 1. Structure of the global context for keys and decapsulation
+	// 2. Pointer to buffer for message sk
+	// 3. Buffer size from the previous parameter
+// Return:
+	// Type int, number of bytes written to the buffer or an error code
+int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk);
+
 // Create and initialize a reusable encapsulation pool
 // Parameters:
 //  number_slots_512  - number of slots for ML-KEM-512 (0 disables this level)
@@ -99,15 +116,6 @@ struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_
 //  Nothing (void)
 void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
 
-// Function for retrieving a private key in a standard-compliant format
-// Parametrs:
-	// 1. Structure of the global context for keys and decapsulation
-	// 2. Pointer to buffer for message sk
-	// 3. Buffer size from the previous parameter
-// Return:
-	// Type int, number of bytes written to the buffer or an error code
-int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk);
-
 #ifdef ML_KEM_DUDECT_TEST 
 
 // INTERNAL FUNCTIONS EXPOSED FOR TESTING
@@ -120,6 +128,9 @@ void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 
 
 // Function for packing a secret vector
 STATIC size_t get_s_vector(const u16 *secret, u8 *buffer, enum ml_kem_k k);
+
+// Function for unpacking a secret vector
+STATIC size_t unpack_s_vector(u16 *secret, u8 *buffer, enum ml_kem_k k);
 
 #endif // ML_KEM_DUDECT_TEST
 

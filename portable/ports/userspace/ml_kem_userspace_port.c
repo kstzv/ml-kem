@@ -69,6 +69,13 @@ struct ml_kem_general_keys_decaps_ctx *err_create_keys(const int err)
 	return NULL;
 }
 
+// Error in imported keys
+struct ml_kem_general_keys_decaps_ctx *err_create_object_from_imported_sk(const int err)
+{
+	(void)err;
+	return NULL;
+}
+
 // Error in encaps
 int err_encaps(const int err) { return err; }
 
@@ -78,12 +85,12 @@ int err_decaps(const int err) { return err; }
 // Error in get public key
 int err_get_pk(const int err) { return err; }
 
+// Error in get private key
+int err_get_sk(const int err) { return err; }
+
 // Error in create pool for encapsulation
 struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err)
 {
 	(void)err;
 	return NULL;
 }
-
-// Error in get private key
-int err_get_sk(const int err) { return err; }

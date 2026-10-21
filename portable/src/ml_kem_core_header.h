@@ -123,11 +123,12 @@ extern void ml_kem_release_slot(ml_kem_atomic_t *slot);
 extern void ml_kem_atomic_init_slot(ml_kem_atomic_t *slot);
 
 struct ml_kem_general_keys_decaps_ctx *err_create_keys(const int err);
+struct ml_kem_general_keys_decaps_ctx *err_create_object_from_imported_sk(const int err);
 int err_encaps(const int err);
 int err_decaps(const int err);
 int err_get_pk(const int err);
-struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err);
 int err_get_sk(const int err);
+struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err);
 
 // ML-KEM security level parameter k:
 // Defines matrix/vector dimensions:

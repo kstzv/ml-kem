@@ -5,19 +5,26 @@
 
 // Forward declarations of public API functions (redeclared for internal usage)
 struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
+struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object_from_imported_sk(u8 *sk, size_t size_sk, size_t size_pool);
 void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx_pool);
 int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t size_pk, u8 *buffer_ct, size_t size_ct, u8 *buffer_ss, size_t size_ss, ml_kem_entropy_fn entropy);
 int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
+int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk);
 struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
 void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
-int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk);
 
 // Forward declarations of local function in this module
 STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
 
 // Function for packing a secret vector
 STATIC size_t get_s_vector(const u16 *secret, u8 *buffer, enum ml_kem_k k);
+
+// Function for unpacking a secret vector
+STATIC size_t unpack_s_vector(u16 *secret, u8 *buffer, enum ml_kem_k k);
+
+// Check coefs pk
+STATIC bool ml_kem_validate_pk(const u8 *pk, size_t size_pk);
 
 // Full initialization routine:
 //  - Generates ML-KEM keypair
@@ -79,6 +86,89 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object(enum ml_kem_k level,
 	error_exit:
 		ml_kem_destroy_ctx_struct(ctx_keys);
 		return err_create_keys(ret);
+}
+
+// This function creates a global key and decapsulation context based on a received message containing a private key. The message format must comply with the standard
+// Parametrs:
+	// 1. Pointer to buffer with message sk
+	// 2. Buffer size from the previous parameter
+	// 3. Buffer for maximum execution parallelism per key during decapsulation (if parallelism within the decapsulation stream is not required, specify 1 as the default)
+// Return:
+	// `struct ml_kem_general_keys_decaps_ctx *` structure of the global context for keys and decapsulation
+struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object_from_imported_sk(u8 *sk, size_t size_sk, size_t size_pool)
+{
+	// Check size pool
+	if(size_pool == 0 || size_pool > ML_KEM_MAX_POOL_SLOTS) { return err_create_object_from_imported_sk(-ML_KEM_EINVAL); }
+	
+	if(!sk) { return err_create_object_from_imported_sk(-ML_KEM_EINVAL); }
+	
+	// Determination of the security level
+	enum ml_kem_k k;
+	size_t size_pk;
+	if(size_sk == LEN_SK_512)
+	{
+		k = ML_KEM_512;
+		size_pk = RES_PUBL_PART_LVL_512;
+	}else if(size_sk == LEN_SK_768)
+	{
+		k = ML_KEM_768;
+		size_pk = RES_PUBL_PART_LVL_768;
+	}else if(size_sk == LEN_SK_1024)
+	{
+		k = ML_KEM_1024;
+		size_pk = RES_PUBL_PART_LVL_1024;
+	}else { return err_create_object_from_imported_sk(-ML_KEM_EINVAL); }
+	
+	// Memory allocation for keys
+	struct ml_kem_ctx *ctx_keys;
+	ctx_keys = ml_kem_ctx_alloc(k);
+	if(!ctx_keys) { return err_create_object_from_imported_sk(-ML_KEM_ENOMEM); }
+	
+	// Get secret vector
+	size_t buff_ctr = unpack_s_vector(ctx_keys->secret, sk, k);
+	
+	// Copy pk messege
+	memcpy(ctx_keys->public_key_msg, sk + buff_ctr, size_pk);
+	buff_ctr += size_pk;
+	
+	// Copy seed matrix
+	memcpy(ctx_keys->seed_rho, ctx_keys->public_key_msg + (size_pk - ML_KEM_SEED_BYTES), ML_KEM_SEED_BYTES);
+	
+	// Copy hash pk
+	memcpy(ctx_keys->h_pk, sk + buff_ctr, ML_KEM_SEED_BYTES);
+	buff_ctr += ML_KEM_SEED_BYTES;
+	
+	// Copy z
+	memcpy(ctx_keys->z, sk + buff_ctr, ML_KEM_SEED_BYTES);
+	buff_ctr += ML_KEM_SEED_BYTES;
+	
+	ctx_keys->k = k;
+	ctx_keys->public_key_msg_len = size_pk;
+	
+	// Check hash in sk messege
+	u8 computed_hash[ML_KEM_SEED_BYTES];
+	ml_kem_sha3_256(computed_hash, ctx_keys->public_key_msg, size_pk);
+	if(memcmp(computed_hash, ctx_keys->h_pk, ML_KEM_SEED_BYTES) != 0)
+	{
+		ml_kem_memzero(computed_hash, sizeof(computed_hash));
+		ml_kem_destroy_ctx_struct(ctx_keys);
+		return err_create_object_from_imported_sk(-ML_KEM_EINVAL);
+	}
+	ml_kem_memzero(computed_hash, ML_KEM_SEED_BYTES);
+	
+	// Check coefficients in pk
+	if(ml_kem_validate_pk(ctx_keys->public_key_msg, ctx_keys->public_key_msg_len) == 0)
+	{
+		ml_kem_destroy_ctx_struct(ctx_keys);
+		return err_create_object_from_imported_sk(-ML_KEM_EINVAL);
+	}
+
+	// Create pool(global context)
+	struct ml_kem_general_keys_decaps_ctx *global_ctx;
+	global_ctx = ml_kem_alloc_decaps_pool(k, size_pool, ctx_keys);
+	if(!global_ctx) { ml_kem_destroy_ctx_struct(ctx_keys); return err_create_object_from_imported_sk(-ML_KEM_ENOMEM); }
+	
+	return global_ctx;
 }
 
 // Full destructor:
@@ -284,50 +374,6 @@ int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *cipherte
 	
 	return 0;
 }
-
-// Function to check the coincidence of ciphertexts after decrypt and re-encaps	
-STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot)
-{
-	// Step 3: Precompute fallback shared secret (z || c) → SHAKE256
-	// Used if ciphertext verification fails (CCA security requirement)
-	u8 hash_z[ML_KEM_SEED_BYTES];
-	memcpy(pool->ml_kem_pool[curr_slot].kdf_buf, pool->ml_kem_pool[curr_slot].decrypt_ctx->ctx->z, ML_KEM_SEED_BYTES);
-	memcpy(pool->ml_kem_pool[curr_slot].kdf_buf + ML_KEM_SEED_BYTES, ciphertext, len_ciphertext);
-	ml_kem_shake256(hash_z, ML_KEM_SEED_BYTES, pool->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
-	
-	// Step 4: Constant-time ciphertext comparison
-	u32 value = 0;
-
-	for(size_t i = 0; i < len_ciphertext; i++)
-	{
-		u32 x = (u32)ciphertext[i];
-		u32 y = (u32)pool->ml_kem_pool[curr_slot].encaps_ctx->ciphertext[i];
-	
-		value |= (x ^ y);
-	}
-	
-	value = (value >> 16) | value;
-	value = (value >> 8)  | value;
-	value = (value >> 4)  | value;
-	value = (value >> 2)  | value;
-	value = (value >> 1)  | value;
-
-	u32 fail = value & 1u;
-
-	u8 mask = (u8)(0u - fail);
-	u8 inv  = (u8)~mask;
-	
-	// Step 5: Constant-time selection of output key
-	//  - if valid: return K_bar
-	//  - if invalid: return fallback hash_z
-	for (size_t i = 0; i < ML_KEM_SEED_BYTES; i++) { result[i] = pool->ml_kem_pool[curr_slot].encaps_ctx->K_bar[i] & inv; }
-
-	for (size_t i = 0; i < ML_KEM_SEED_BYTES; i++) { result[i] |= hash_z[i] & mask; }
-	
-	// Step 6: Wipe local buffers
-	ml_kem_memzero(hash_z, ML_KEM_SEED_BYTES);
-	ml_kem_memzero(pool->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
-}
 	
 // Gets the public key
 // Parameters:
@@ -352,6 +398,48 @@ int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffe
 	memcpy(buffer_for_public_key, pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg_len);
 	
 	return 0;
+}
+
+// Function for retrieving a private key in a standard-compliant format
+// Parametrs:
+	// 1. Structure of the global context for keys and decapsulation
+	// 2. Pointer to buffer for message sk
+	// 3. Buffer size from the previous parameter
+// Return:
+	// Type int, number of bytes written to the buffer or an error code
+int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk)
+{
+	// Check got parametrs
+	if(!ctx || !ctx->ml_kem_pool || !ctx->ml_kem_pool->decrypt_ctx || !ctx->ml_kem_pool->decrypt_ctx->ctx 
+		|| !ctx->ml_kem_pool->decrypt_ctx->ctx->secret || !ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg || !buffer_for_sk) { return err_get_sk(-ML_KEM_EINVAL); }
+	
+	if(ctx->ml_kem_pool->decrypt_ctx->ctx->k != ML_KEM_512 && ctx->ml_kem_pool->decrypt_ctx->ctx->k != ML_KEM_768 &&
+		ctx->ml_kem_pool->decrypt_ctx->ctx->k != ML_KEM_1024) { return err_get_sk(-ML_KEM_EINVAL); }
+	
+	if(ctx->ml_kem_pool->decrypt_ctx->ctx->k == ML_KEM_512 
+		&& (size_buffer_for_sk < LEN_SK_512 
+			|| ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len != RES_PUBL_PART_LVL_512)) { return err_get_sk(-ML_KEM_EINVAL); }
+	else if(ctx->ml_kem_pool->decrypt_ctx->ctx->k == ML_KEM_768 
+		&& (size_buffer_for_sk < LEN_SK_768
+			|| ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len != RES_PUBL_PART_LVL_768)) { return err_get_sk(-ML_KEM_EINVAL); }
+	else if(ctx->ml_kem_pool->decrypt_ctx->ctx->k == ML_KEM_1024 
+		&& (size_buffer_for_sk < LEN_SK_1024
+			|| ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len != RES_PUBL_PART_LVL_1024)) { return err_get_sk(-ML_KEM_EINVAL); }
+	
+	// Get secret vector
+	size_t buff_ctr = 0;
+	buff_ctr = get_s_vector(ctx->ml_kem_pool->decrypt_ctx->ctx->secret, buffer_for_sk, ctx->ml_kem_pool->decrypt_ctx->ctx->k);
+	// Copy pk in bytes format and seed matrix
+	memcpy(buffer_for_sk + buff_ctr, ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg, ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len);
+	buff_ctr += ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len;
+	// Copy hash pk
+	memcpy(buffer_for_sk + buff_ctr, ctx->ml_kem_pool->decrypt_ctx->ctx->h_pk, ML_KEM_SEED_BYTES);
+	buff_ctr += ML_KEM_SEED_BYTES;
+	// Copy z
+	memcpy(buffer_for_sk + buff_ctr, ctx->ml_kem_pool->decrypt_ctx->ctx->z, ML_KEM_SEED_BYTES);
+	buff_ctr += ML_KEM_SEED_BYTES;
+	
+	return (int)buff_ctr;
 }
 
 // Create and initialize a reusable encapsulation pool.
@@ -537,46 +625,48 @@ void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx)
 	ml_kem_free(ctx);
 }
 
-// Function for retrieving a private key in a standard-compliant format
-// Parametrs:
-	// 1. Structure of the global context for keys and decapsulation
-	// 2. Pointer to buffer for message sk
-	// 3. Buffer size from the previous parameter
-// Return:
-	// Type int, number of bytes written to the buffer or an error code
-int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk)
+// Function to check the coincidence of ciphertexts after decrypt and re-encaps	
+STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot)
 {
-	// Check got parametrs
-	if(!ctx || !ctx->ml_kem_pool || !ctx->ml_kem_pool->decrypt_ctx || !ctx->ml_kem_pool->decrypt_ctx->ctx 
-		|| !ctx->ml_kem_pool->decrypt_ctx->ctx->secret || !ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg || !buffer_for_sk) { return err_get_sk(-ML_KEM_EINVAL); }
+	// Step 3: Precompute fallback shared secret (z || c) → SHAKE256
+	// Used if ciphertext verification fails (CCA security requirement)
+	u8 hash_z[ML_KEM_SEED_BYTES];
+	memcpy(pool->ml_kem_pool[curr_slot].kdf_buf, pool->ml_kem_pool[curr_slot].decrypt_ctx->ctx->z, ML_KEM_SEED_BYTES);
+	memcpy(pool->ml_kem_pool[curr_slot].kdf_buf + ML_KEM_SEED_BYTES, ciphertext, len_ciphertext);
+	ml_kem_shake256(hash_z, ML_KEM_SEED_BYTES, pool->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
 	
-	if(ctx->ml_kem_pool->decrypt_ctx->ctx->k != ML_KEM_512 && ctx->ml_kem_pool->decrypt_ctx->ctx->k != ML_KEM_768 &&
-		ctx->ml_kem_pool->decrypt_ctx->ctx->k != ML_KEM_1024) { return err_get_sk(-ML_KEM_EINVAL); }
+	// Step 4: Constant-time ciphertext comparison
+	u32 value = 0;
+
+	for(size_t i = 0; i < len_ciphertext; i++)
+	{
+		u32 x = (u32)ciphertext[i];
+		u32 y = (u32)pool->ml_kem_pool[curr_slot].encaps_ctx->ciphertext[i];
 	
-	if(ctx->ml_kem_pool->decrypt_ctx->ctx->k == ML_KEM_512 
-		&& (size_buffer_for_sk < LEN_SK_512 
-			|| ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len != RES_PUBL_PART_LVL_512)) { return err_get_sk(-ML_KEM_EINVAL); }
-	else if(ctx->ml_kem_pool->decrypt_ctx->ctx->k == ML_KEM_768 
-		&& (size_buffer_for_sk < LEN_SK_768
-			|| ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len != RES_PUBL_PART_LVL_768)) { return err_get_sk(-ML_KEM_EINVAL); }
-	else if(ctx->ml_kem_pool->decrypt_ctx->ctx->k == ML_KEM_1024 
-		&& (size_buffer_for_sk < LEN_SK_1024
-			|| ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len != RES_PUBL_PART_LVL_1024)) { return err_get_sk(-ML_KEM_EINVAL); }
+		value |= (x ^ y);
+	}
 	
-	// Get secret vector
-	size_t buff_ctr = 0;
-	buff_ctr = get_s_vector(ctx->ml_kem_pool->decrypt_ctx->ctx->secret, buffer_for_sk, ctx->ml_kem_pool->decrypt_ctx->ctx->k);
-	// Copy pk in bytes format and seed matrix
-	memcpy(buffer_for_sk + buff_ctr, ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg, ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len);
-	buff_ctr += ctx->ml_kem_pool->decrypt_ctx->ctx->public_key_msg_len;
-	// Copy hash pk
-	memcpy(buffer_for_sk + buff_ctr, ctx->ml_kem_pool->decrypt_ctx->ctx->h_pk, ML_KEM_SEED_BYTES);
-	buff_ctr += ML_KEM_SEED_BYTES;
-	// Copy z
-	memcpy(buffer_for_sk + buff_ctr, ctx->ml_kem_pool->decrypt_ctx->ctx->z, ML_KEM_SEED_BYTES);
-	buff_ctr += ML_KEM_SEED_BYTES;
+	value = (value >> 16) | value;
+	value = (value >> 8)  | value;
+	value = (value >> 4)  | value;
+	value = (value >> 2)  | value;
+	value = (value >> 1)  | value;
+
+	u32 fail = value & 1u;
+
+	u8 mask = (u8)(0u - fail);
+	u8 inv  = (u8)~mask;
 	
-	return (int)buff_ctr;
+	// Step 5: Constant-time selection of output key
+	//  - if valid: return K_bar
+	//  - if invalid: return fallback hash_z
+	for (size_t i = 0; i < ML_KEM_SEED_BYTES; i++) { result[i] = pool->ml_kem_pool[curr_slot].encaps_ctx->K_bar[i] & inv; }
+
+	for (size_t i = 0; i < ML_KEM_SEED_BYTES; i++) { result[i] |= hash_z[i] & mask; }
+	
+	// Step 6: Wipe local buffers
+	ml_kem_memzero(hash_z, ML_KEM_SEED_BYTES);
+	ml_kem_memzero(pool->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
 }
 
 // Function for packing a secret vector
@@ -595,6 +685,52 @@ STATIC size_t get_s_vector(const u16 *secret, u8 *buffer, enum ml_kem_k k)
     }
 
     return buff_ctr;
+}
+
+// Function for unpacking a secret vector
+STATIC size_t unpack_s_vector(u16 *secret, u8 *buffer, enum ml_kem_k k)
+{
+	size_t buff_ctr = 0;
+	size_t i = 0;
+	
+	while(i < k * ML_KEM_N)
+	{
+		u8 a = buffer[buff_ctr++];
+        u8 b = buffer[buff_ctr++];
+        u8 c = buffer[buff_ctr++];
+		
+		secret[i] = (u16)a;
+        secret[i] |= (u16)(b & 0x0F) << 8;
+        secret[i] = ml_kem_ct_sub_if_ge(secret[i]);
+        i++;
+        
+		secret[i] = (u16)(b >> 4);
+        secret[i] |= (u16)c << 4;
+        secret[i] = ml_kem_ct_sub_if_ge(secret[i]);
+        i++;
+	}
+	return buff_ctr;
+}
+
+// Check coefs pk
+STATIC bool ml_kem_validate_pk(const u8 *pk, size_t size_pk)
+{
+    size_t len = size_pk - ML_KEM_SEED_BYTES;
+    bool res = true; 
+
+    for(size_t i = 0; i < len; i += 3)
+    {
+        u8 a = pk[i];
+        u8 b = pk[i + 1];
+        u8 c = pk[i + 2];
+
+        u16 coef1 = (u16)a | ((u16)(b & 0x0F) << 8);
+        u16 coef2 = (u16)(b >> 4) | ((u16)c << 4);
+
+        if(coef1 >= ML_KEM_Q || coef2 >= ML_KEM_Q) { res = false; }
+    }
+
+    return res;
 }
 
 // For export in Linux kernel

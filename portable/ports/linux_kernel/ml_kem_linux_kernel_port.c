@@ -54,6 +54,14 @@ struct ml_kem_general_keys_decaps_ctx *err_create_keys(const int err)
 	else { return ERR_PTR(-EFAULT); }
 }
 
+// Error in imported keys
+struct ml_kem_general_keys_decaps_ctx *err_create_object_from_imported_sk(const int err)
+{
+	if(err == -ML_KEM_EINVAL) { return ERR_PTR(-EINVAL); }
+	else if( err == -ML_KEM_ENOMEM) { return ERR_PTR(-ENOMEM); }
+	else { return ERR_PTR(-EFAULT); }
+}
+
 // Error in encaps
 int err_encaps(const int err) { return err; }
 
@@ -63,6 +71,9 @@ int err_decaps(const int err) { return err; }
 // Error in get poublic key
 int err_get_pk(const int err) { return err; }
 
+// Error in get private key
+int err_get_sk(const int err) { return err; }
+
 // Error in encaps pool
 struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err)
 {
@@ -70,6 +81,3 @@ struct ml_kem_pool_encaps_ctx *err_create_encaps_pool(const int err)
 	else if( err == -ML_KEM_ENOMEM) { return ERR_PTR(-ENOMEM); }
 	else { return ERR_PTR(-EFAULT); }
 }
-
-// Error in get private key
-int err_get_sk(const int err) { return err; }
