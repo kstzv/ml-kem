@@ -739,13 +739,14 @@ STATIC bool ml_kem_validate_pk(const u8 *pk, size_t size_pk)
 #include <linux/export.h>
 
 EXPORT_SYMBOL_GPL(ml_kem_create_object);
+EXPORT_SYMBOL_GPL(ml_kem_create_object_from_imported_sk);
 EXPORT_SYMBOL_GPL(ml_kem_destroy_core);
-EXPORT_SYMBOL_GPL(ml_kem_get_public_key);
 EXPORT_SYMBOL_GPL(ml_kem_encaps_core);
 EXPORT_SYMBOL_GPL(ml_kem_decaps_core);
+EXPORT_SYMBOL_GPL(ml_kem_get_public_key);
+EXPORT_SYMBOL_GPL(ml_kem_get_sk);
 EXPORT_SYMBOL_GPL(create_encaps_pool);
 EXPORT_SYMBOL_GPL(ml_kem_encaps_pool_destroy);
-EXPORT_SYMBOL_GPL(ml_kem_get_sk);
 
 #endif
 
