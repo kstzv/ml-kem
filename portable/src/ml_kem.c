@@ -6,16 +6,16 @@
 // Forward declarations of public API functions (redeclared for internal usage)
 struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object(enum ml_kem_k level, size_t ml_kem_pool_count, ml_kem_entropy_fn entropy);
 struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object_from_imported_sk(u8 *sk, size_t size_sk, size_t size_pool);
-void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx_pool);
+void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx);
 int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t size_pk, u8 *buffer_ct, size_t size_ct, u8 *buffer_ss, size_t size_ss, ml_kem_entropy_fn entropy);
-int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
-int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
+int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
+int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_public_key, size_t size_buffer);
 int ml_kem_get_sk(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_sk, size_t size_buffer_for_sk);
 struct ml_kem_pool_encaps_ctx *create_encaps_pool(size_t number_slots_512, size_t number_slots_768, size_t number_slots_1024);
 void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
 
 // Forward declarations of local function in this module
-STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
 
 // Function for packing a secret vector
 STATIC size_t get_s_vector(const u16 *secret, u8 *buffer, enum ml_kem_k k);
@@ -175,19 +175,19 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object_from_imported_sk(u8 
 //  - Destroys decapsulation pool
 //  - Securely wipes and frees all associated key material
 // Parameters:
-//  ctx_pool - pool returned by ml_kem_create_object()
+//  ctx - the primary decapsulation and key object returned by the ml_kem_create_object() function
 // Notes:
 //  - Safe to call with NULL
 //  - Assumes all slots share the same key context
-void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx_pool)
+void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx)
 {
-	if(!ctx_pool) { return; }
+	if(!ctx) { return; }
 	
 	struct ml_kem_ctx *keys;
-	keys = ctx_pool->ml_kem_pool[0].decrypt_ctx->ctx;
+	keys = ctx->ml_kem_pool[0].decrypt_ctx->ctx;
 	
 	// Destroy pool (includes slot cleanup and memory release)
-	ml_kem_pool_destroy(ctx_pool);
+	ml_kem_pool_destroy(ctx);
 	
 	// Destroy shared key material
 	if(keys) { ml_kem_destroy_ctx_struct(keys); }
@@ -304,7 +304,7 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 
 // Decapsulation core (server-side API)
 // Parameters:
-//  pool           - initialized decapsulation pool (shared key + slot contexts)
+//  ctx            - initialized primary key and decapsulation object (shared key + slot contexts)
 //  ciphertext     - input ciphertext (serialized format)
 //  len_ciphertext - length of ciphertext (must match level)
 //  result         - output buffer (32 bytes) for shared secret
@@ -323,30 +323,30 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 //  - Ciphertext comparison is done in constant time
 //  - Final key selection uses bitwise masking (no branches)
 //  - All sensitive buffers are wiped before releasing slot
-int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result)
+int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result)
 {
 	// Validate input pointers
 	if (!ciphertext || !result) { return err_decaps(-EINVAL); }
 	
 	// Validate pool and slot array
-	if(!pool || !pool->ml_kem_pool) { return err_decaps(-EINVAL); }
+	if(!ctx || !ctx->ml_kem_pool) { return err_decaps(-EINVAL); }
 	
 	// Validate internal pool memory regions (must be preallocated)
-	if(!pool->ciphertexts_mem_ptr || !pool->public_key_msgs_mem_ptr || !pool->decrypt_mem_ptr || !pool->encaps_mem_ptr) { return err_decaps(-EINVAL); }
+	if(!ctx->ciphertexts_mem_ptr || !ctx->public_key_msgs_mem_ptr || !ctx->decrypt_mem_ptr || !ctx->encaps_mem_ptr) { return err_decaps(-EINVAL); }
 	
 	// Validate output buffer size
 	if(len_result != ML_KEM_SEED_BYTES) { return err_decaps(-EINVAL); }
 	
 	// Validate ciphertext length against pool configuration
-	if(len_ciphertext != pool->ml_kem_pool[0].decrypt_ctx->ciphertext_len)
+	if(len_ciphertext != ctx->ml_kem_pool[0].decrypt_ctx->ciphertext_len)
 	{ return err_decaps(-EINVAL); }
 	
 	// Acquire a free slot (lock-free)
 	size_t curr_slot = ML_KEM_MAX_POOL_SLOTS + 1;
-	for(size_t i = 0; i < pool->ml_kem_pool_count; i++)
+	for(size_t i = 0; i < ctx->ml_kem_pool_count; i++)
 	{
 		bool acquired;
-		acquired = ml_kem_try_acquire_slot(&pool->ml_kem_pool[i].is_free);
+		acquired = ml_kem_try_acquire_slot(&ctx->ml_kem_pool[i].is_free);
 		
 		// Stop at first successfully acquired slot
 		if(acquired) { curr_slot = i; break; }
@@ -356,46 +356,46 @@ int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *cipherte
 	if(curr_slot == ML_KEM_MAX_POOL_SLOTS + 1) { return err_decaps(-EBUSY); }
 	
 	// Step 1: Decrypt ciphertext → recover message m
-	ml_kem_decrypt(pool->ml_kem_pool[curr_slot].decrypt_ctx, ciphertext);
+	ml_kem_decrypt(ctx->ml_kem_pool[curr_slot].decrypt_ctx, ciphertext);
 	
 	// Step 2: Re-encapsulate using recovered m and stored h(pk)
 	// This reconstructs expected ciphertext and shared secret
-	ml_kem_encapsulation(pool->ml_kem_pool[curr_slot].encaps_ctx, pool->ml_kem_pool[curr_slot].decrypt_ctx->m, pool->ml_kem_pool[curr_slot].decrypt_ctx->ctx->h_pk, NULL);
+	ml_kem_encapsulation(ctx->ml_kem_pool[curr_slot].encaps_ctx, ctx->ml_kem_pool[curr_slot].decrypt_ctx->m, ctx->ml_kem_pool[curr_slot].decrypt_ctx->ctx->h_pk, NULL);
 	
 	// Steps from 3 to 6 doing in this local functions. This functions must be CT
-	ml_kem_decaps_ct_select_ss(pool, ciphertext, len_ciphertext, result, curr_slot);
+	ml_kem_decaps_ct_select_ss(ctx, ciphertext, len_ciphertext, result, curr_slot);
 	
 	// Step 7: Wipe sensitive data in slot contexts
-	ml_kem_wipe_encaps(pool->ml_kem_pool[curr_slot].encaps_ctx);
-	ml_kem_wipe_decrypt(pool->ml_kem_pool[curr_slot].decrypt_ctx);
+	ml_kem_wipe_encaps(ctx->ml_kem_pool[curr_slot].encaps_ctx);
+	ml_kem_wipe_decrypt(ctx->ml_kem_pool[curr_slot].decrypt_ctx);
 	
 	// Release slot (atomic)
-	ml_kem_release_slot(&pool->ml_kem_pool[curr_slot].is_free);
+	ml_kem_release_slot(&ctx->ml_kem_pool[curr_slot].is_free);
 	
 	return 0;
 }
 	
 // Gets the public key
 // Parameters:
-// -pool           			- initialized decapsulation pool (contains the PK within the structure hierarchy)
+// -ctx           			- initialized primary key and decapsulation object (contains the PK within the structure hierarchy)
 // -buffer_for_public_key   - buffer where the PK will be copied
 // -size_buffer      		- size of the buffer (must conform to the ML-KEM security level)
-int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer)
+int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_public_key, size_t size_buffer)
 {
 	// Validate pool and slot array
-	if(!pool || !pool->ml_kem_pool) { return err_get_pk(-EINVAL); }
+	if(!ctx || !ctx->ml_kem_pool) { return err_get_pk(-EINVAL); }
 	
 	// Validate internal pool memory regions (must be preallocated)
-	if(!pool->ciphertexts_mem_ptr || !pool->public_key_msgs_mem_ptr || !pool->decrypt_mem_ptr || !pool->encaps_mem_ptr) { return err_get_pk(-EINVAL); }
+	if(!ctx->ciphertexts_mem_ptr || !ctx->public_key_msgs_mem_ptr || !ctx->decrypt_mem_ptr || !ctx->encaps_mem_ptr) { return err_get_pk(-EINVAL); }
 	
 	// Validate buffer ptr
 	if(!buffer_for_public_key) { return err_get_pk(-EINVAL); }
 	
 	// Validate size of buffer
-	if(pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg_len != size_buffer) { return err_get_pk(-EINVAL); }
+	if(ctx->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg_len != size_buffer) { return err_get_pk(-EINVAL); }
 	
 	// Copy key to buffer
-	memcpy(buffer_for_public_key, pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, pool->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg_len);
+	memcpy(buffer_for_public_key, ctx->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ctx->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg_len);
 	
 	return 0;
 }
@@ -626,14 +626,14 @@ void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx)
 }
 
 // Function to check the coincidence of ciphertexts after decrypt and re-encaps	
-STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot)
+STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot)
 {
 	// Step 3: Precompute fallback shared secret (z || c) → SHAKE256
 	// Used if ciphertext verification fails (CCA security requirement)
 	u8 hash_z[ML_KEM_SEED_BYTES];
-	memcpy(pool->ml_kem_pool[curr_slot].kdf_buf, pool->ml_kem_pool[curr_slot].decrypt_ctx->ctx->z, ML_KEM_SEED_BYTES);
-	memcpy(pool->ml_kem_pool[curr_slot].kdf_buf + ML_KEM_SEED_BYTES, ciphertext, len_ciphertext);
-	ml_kem_shake256(hash_z, ML_KEM_SEED_BYTES, pool->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
+	memcpy(ctx->ml_kem_pool[curr_slot].kdf_buf, ctx->ml_kem_pool[curr_slot].decrypt_ctx->ctx->z, ML_KEM_SEED_BYTES);
+	memcpy(ctx->ml_kem_pool[curr_slot].kdf_buf + ML_KEM_SEED_BYTES, ciphertext, len_ciphertext);
+	ml_kem_shake256(hash_z, ML_KEM_SEED_BYTES, ctx->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
 	
 	// Step 4: Constant-time ciphertext comparison
 	u32 value = 0;
@@ -641,7 +641,7 @@ STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *po
 	for(size_t i = 0; i < len_ciphertext; i++)
 	{
 		u32 x = (u32)ciphertext[i];
-		u32 y = (u32)pool->ml_kem_pool[curr_slot].encaps_ctx->ciphertext[i];
+		u32 y = (u32)ctx->ml_kem_pool[curr_slot].encaps_ctx->ciphertext[i];
 	
 		value |= (x ^ y);
 	}
@@ -660,13 +660,13 @@ STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *po
 	// Step 5: Constant-time selection of output key
 	//  - if valid: return K_bar
 	//  - if invalid: return fallback hash_z
-	for (size_t i = 0; i < ML_KEM_SEED_BYTES; i++) { result[i] = pool->ml_kem_pool[curr_slot].encaps_ctx->K_bar[i] & inv; }
+	for (size_t i = 0; i < ML_KEM_SEED_BYTES; i++) { result[i] = ctx->ml_kem_pool[curr_slot].encaps_ctx->K_bar[i] & inv; }
 
 	for (size_t i = 0; i < ML_KEM_SEED_BYTES; i++) { result[i] |= hash_z[i] & mask; }
 	
 	// Step 6: Wipe local buffers
 	ml_kem_memzero(hash_z, ML_KEM_SEED_BYTES);
-	ml_kem_memzero(pool->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
+	ml_kem_memzero(ctx->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
 }
 
 // Function for packing a secret vector

@@ -39,12 +39,12 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object_from_imported_sk(u8 
 
 // Destroy decapsulation pool object.
 // Parameters:
-//  ctx_pool - previously created pool context
+//  ctx - the primary decapsulation and key object returned by the ml_kem_create_object() function
 // Behavior:
 //  - Wipes sensitive data
 //  - Frees all associated memory
 // Safe to call with NULL.
-void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx_pool);
+void ml_kem_destroy_core(struct ml_kem_general_keys_decaps_ctx *ctx);
 
 // Encapsulation core (client-side API)
 // Parameters:
@@ -67,7 +67,7 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 
 // Perform decapsulation (server-side).
 // Parameters:
-//  pool           - decapsulation pool object
+//  ctx            - keys and decapsulation object
 //  ciphertext     - input ciphertext (serialized)
 //  len_ciphertext - ciphertext length (must match level)
 //  result         - output buffer (must be 32 bytes)
@@ -81,14 +81,14 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 //  - Implements full ML-KEM decapsulation flow:
 //      decrypt → re-encapsulate → verify → constant-time select
 //  - Output is always written in constant time
-int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
+int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t len_result);
 
 // Gets the public key
 // Parameters:
-// -pool           			- initialized decapsulation pool (contains the PK within the structure hierarchy)
+// -ctx           			- initialized primary key and decapsulation object (contains the PK within the structure hierarchy)
 // -buffer_for_public_key   - buffer where the PK will be copied
 // -size_buffer      		- size of the buffer (must conform to the ML-KEM security level)
-int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *pool, u8 *buffer_for_public_key, size_t size_buffer);
+int ml_kem_get_public_key(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *buffer_for_public_key, size_t size_buffer);
 
 // Function for retrieving a private key in a standard-compliant format
 // Parametrs:
@@ -124,7 +124,7 @@ void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx);
 // WARNING: 1. Not part of the public API; 2. Not intended for external use;
 
 // Forward declarations of local function in this module
-void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *pool, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
+void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *ciphertext, size_t len_ciphertext, u8 *result, size_t curr_slot);
 
 // Function for packing a secret vector
 STATIC size_t get_s_vector(const u16 *secret, u8 *buffer, enum ml_kem_k k);
