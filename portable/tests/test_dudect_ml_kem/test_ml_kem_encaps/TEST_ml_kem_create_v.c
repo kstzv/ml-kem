@@ -71,12 +71,15 @@ static void init_ctx(void)
     kem_ctx.public_key = pk_buf;
     kem_ctx.y          = y_buf;
     kem_ctx.poly       = poly_buf;
+    static u64 keccak_state[ML_KEM_KECCAK_STATE_BYTES / sizeof(u64)];
 
      // We make the public key fixed and NOT zero to avoid an overly artificial degenerate case.
      // This is public data, so it shouldn't be a dudect class
     for (size_t i = 0; i < ML_KEM_N * kem_ctx.k; i++) {
         kem_ctx.public_key[i] = (u16)(dudect_xorshift64() % ML_KEM_Q);
     }
+    
+    shake_ctx_get_mem(&kem_ctx.shake, keccak_state, ML_KEM_KECCAK_STATE_BYTES / sizeof(u64));
 
     memset(kem_ctx.seed_rho, 0xA5, ML_KEM_SEED_BYTES); /* тут не використовується create_v, але хай валідно */
 }

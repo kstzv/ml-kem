@@ -13,21 +13,23 @@
 #include "ml_kem_core_header.h"
 
 // Number of slots in the decapsulation pool (controls parallelism level)
-#define NUMBER_SLOTS 8
+#define NUMBER_SLOTS 1
 
 // Number of test vectors per parameter set and buffer size for JSON line reading
-#define NUMBER_VECTORS_ONE_LEVEL 25
-#define SIZE_BUFFER 4096
+#define NUMBER_VECTORS_ONE_LEVEL 10
+#define SIZE_BUFFER 8192
 
 // Step increments for switching between ML-KEM parameter sets
 #define LEVEL_STEP 256
 #define SIZE_EK_STEP 384
+#define SIZE_DK_STEP 768
 #define K_STEP 1
 
 // Buffers for seed (d) and shared secrets from encapsulation/decapsulation
+u8 mass_c[LEN_CIPHERTEXT_1024];
+u8 mass_dk[LEN_SK_1024];
+u8 decaps_res[ML_KEM_SEED_BYTES];
 u8 mass_d[ML_KEM_SEED_BYTES];
-u8 mass_K_encaps[ML_KEM_SEED_BYTES];
-u8 mass_K_decaps[ML_KEM_SEED_BYTES];
 
 // Helper functions for HEX parsing
 static int hexval(int c);
@@ -36,11 +38,11 @@ int read_hex_byte(const char *in, u8 *out, size_t size_out_mass);
 int main()
 {
 	printf("\nThis is test decapsulation test and finally test in ML-KEM");
-	printf("\nThis is show 75 messages about everyone of 75 vectors NIST\n");
+	printf("\nThis is show 30 messages about everyone of 30 vectors NIST(76 - 105 vectors in file)\n");
 	printf("\nfrom vector d from file keygen, with this seed going to ALL algorithm\n");
-	printf("\nEncapsulation get ciphertext from base d seed(ek based on this seed)\n");
-	printf("\nEncapsulation cheked is earlier, it is correct\n");
-	printf("\nBase on this chacked decapsulation, K_SHARED from encaps, and decaps in memcmp()\n");
+	printf("\nVectors dk, c and k is being unpacked\n");
+	printf("\nDecapsulation is performed using a function of this implementation\n");
+	printf("\nAnd the vectors obtained from the file will be checked against the output produced by the functions of this implementation\n");
 	printf("\nIf you to see");
 	printf("\n\"Wrong! In *** vector, in ML-KEM-*** level sequrity!\"");
 	printf("\nso this ML-KEM version is wrong\n");
@@ -50,33 +52,17 @@ int main()
 	printf("\nIn test using memcmp()....\n");
 	printf("...................................................................................................................................................\n");
 	
-	// Zero-initialize all working buffers before use
-	for(size_t i = 0; i < ML_KEM_SEED_BYTES; i++)
-	{
-		mass_d[i] = 0;
-	}
-	
-	for(size_t i = 0; i < ML_KEM_SEED_BYTES; i++)
-	{
-		mass_K_encaps[i] = 0;
-	}
-	
-	for(size_t i = 0; i < ML_KEM_SEED_BYTES; i++)
-	{
-		mass_K_decaps[i] = 0;
-	}
-	
 	// Buffer for reading lines from JSON test vector file
 	char buffer[SIZE_BUFFER];
 	
 	// Open NIST test vectors (keygen projection)
-	FILE *f = fopen("ML-KEM-keyGen-FIPS203/internalProjection.json", "r");
+	FILE *f = fopen("ML-KEM-encapDecap-FIPS203/internalProjection.json", "r");
 	if(!f) { return -1; }
 	
 	// Skip initial content until first "parameterSet" entry
 	while(fgets(buffer, sizeof(buffer), f))
 	{
-		if(strstr(buffer, "parameterSet"))
+		if(strstr(buffer, "\"tgId\": 4"))
 		{
 			break;
 		}
@@ -84,86 +70,74 @@ int main()
 	
 	// Initialize counters for the first parameter set: ML-KEM-512 (k = 2). These values are incremented per parameter set transition.
 	size_t level_counter = 512;
-	size_t size_ek_counter = 800;
+	size_t size_dk_counter = 1632;
 	size_t vectors_counter = 0;
 	size_t len_ciphertext = LEN_CIPHERTEXT_512;
 	enum ml_kem_k k = 2;
 	while(fgets(buffer, sizeof(buffer), f))
 	{
-		if(strstr(buffer, "parameterSet"))
+		if(strstr(buffer, "\"tgId\": 4"))
 		{
 			printf("\n");
 			printf("...................................................................................................................................................\n");
-			printf("\nThis is 25 tests vectors all algorithm and decaps in ML-KEM-");
-			printf("%zu\n", level_counter);
-			
-			// Move to next parameter set (512 -> 768 -> 1024)
+			printf("\nThis is 25 tests vectors all algorithm and decaps in ML-KEM-512\n");
+			len_ciphertext = LEN_CIPHERTEXT_512;
 			level_counter += LEVEL_STEP;
-			size_ek_counter += SIZE_EK_STEP;
-			vectors_counter = 0;
+			size_dk_counter = LEN_SK_512;
 			k += K_STEP;
-			
-			// Select correct ciphertext length for current parameter set
-			if(k == ML_KEM_512) { len_ciphertext = LEN_CIPHERTEXT_512; }
-			else if(k == ML_KEM_768) { len_ciphertext = LEN_CIPHERTEXT_768; }
-			else if(k == ML_KEM_1024) { len_ciphertext = LEN_CIPHERTEXT_1024; }
-			
-		}else if(strstr(buffer, "\"d\": \""))
+			vectors_counter = 0;
+		}else if(strstr(buffer, "\"tgId\": 5"))
 		{
-			// Parse seed 'd' from test vector. This seed is used to deterministically derive key material.
-			size_t ret = read_hex_byte(buffer, mass_d, ML_KEM_SEED_BYTES);
+			printf("\n");
+			printf("...................................................................................................................................................\n");
+			printf("\nThis is 25 tests vectors all algorithm and decaps in ML-KEM-768\n");
+			len_ciphertext = LEN_CIPHERTEXT_768;
+			level_counter += LEVEL_STEP;
+			size_dk_counter = LEN_SK_768;
+			k += K_STEP;
+			vectors_counter = 0;
+		}else if(strstr(buffer, "\"tgId\": 6"))
+		{
+			printf("\n");
+			printf("...................................................................................................................................................\n");
+			printf("\nThis is 25 tests vectors all algorithm and decaps in ML-KEM-1024\n");
+			len_ciphertext = LEN_CIPHERTEXT_1024;
+			level_counter += LEVEL_STEP;
+			size_dk_counter = LEN_SK_1024;
+			k += K_STEP;
+			vectors_counter = 0;
+		}else if(strstr(buffer, "\"dk\": \""))
+		{
+			size_t ret = read_hex_byte(buffer, mass_dk, size_dk_counter);
+			if(ret != size_dk_counter) { return -1; }
+		}else if(strstr(buffer, "\"c\": \""))
+		{
+			size_t ret = read_hex_byte(buffer, mass_c, len_ciphertext);
+			if(ret != len_ciphertext) { return -1; }
+		}else if(strstr(buffer, "\"k\": \""))
+		{
+			size_t ret = read_hex_byte(buffer, decaps_res, ML_KEM_SEED_BYTES);
 			if(ret != ML_KEM_SEED_BYTES) { return -1; }
 			
-			// Create ML-KEM context with decapsulation pool
-			struct ml_kem_general_keys_decaps_ctx *this_ctx;
-			this_ctx = ml_kem_create_object(k, NUMBER_SLOTS, NULL);
+			u8 local_decaps_res[ML_KEM_SEED_BYTES];
 			
-			u8 pk[RES_PUBL_PART_LVL_1024];
-			ret = ml_kem_get_public_key(this_ctx, pk, size_ek_counter);
-			if(ret != 0) { ml_kem_destroy_core(this_ctx); return -1; }
+			struct ml_kem_general_keys_decaps_ctx *ctx;
+			ctx = ml_kem_create_object_from_imported_sk(mass_dk, size_dk_counter, NUMBER_SLOTS);
+			if(!ctx) { printf("Error in ml_kem_create_object_from_imported_sk()\n"); return -1; }
 			
-			u8 ciphertext[LEN_CIPHERTEXT_1024];
-			ret = ml_kem_encaps_core(NULL, pk, size_ek_counter, ciphertext, len_ciphertext, mass_K_encaps, ML_KEM_SEED_BYTES, NULL);
-			if(ret != 0) { ml_kem_destroy_core(this_ctx); return -1; }
+			int res = ml_kem_decaps_core(ctx, mass_c, len_ciphertext, local_decaps_res, ML_KEM_SEED_BYTES);
+			if(res != 0) { printf("Error in ml_kem_decaps_core()\n"); ml_kem_destroy_core(ctx); return res; }
 			
-			// Perform decapsulation: derive shared secret from ciphertext using private key
-			ret = ml_kem_decaps_core(this_ctx, ciphertext, len_ciphertext, mass_K_decaps, ML_KEM_SEED_BYTES);
-			if(ret != 0) { ml_kem_destroy_core(this_ctx); return -1; }
-			
-			// Validate correctness: shared secret from encapsulation must match decapsulation result. 
-			// NOTE: memcmp is used here for testing only (not constant-time).
-			if(memcmp(mass_K_encaps, mass_K_decaps, ML_KEM_SEED_BYTES) != 0)
+			if(memcmp(local_decaps_res, decaps_res, ML_KEM_SEED_BYTES) != 0)
 			{
 				printf("\nWrong! In %zu vector, in ML-KEM-%zu level sequrity!", vectors_counter, level_counter);
 			}else{
 				printf("\nDone.... In %zu vector, in ML-KEM-%zu level sequrity is identical with vector NIST....", vectors_counter, level_counter);
 			}
 			
-			// Check encaps in pool
-			struct ml_kem_pool_encaps_ctx *pool_encaps_ctx;
-			pool_encaps_ctx = create_encaps_pool(5,5,5);
-			ret = ml_kem_encaps_core(pool_encaps_ctx, pk, size_ek_counter, ciphertext, len_ciphertext, mass_K_encaps, ML_KEM_SEED_BYTES, NULL);
-			if(ret != 0) { ml_kem_destroy_core(this_ctx); ml_kem_encaps_pool_destroy(pool_encaps_ctx); return -1; }
-			
-			// Perform decapsulation: derive shared secret from ciphertext using private key
-			ret = ml_kem_decaps_core(this_ctx, ciphertext, len_ciphertext, mass_K_decaps, ML_KEM_SEED_BYTES);
-			if(ret != 0) { ml_kem_destroy_core(this_ctx); return -1; }
-			
-			// Validate correctness: shared secret from encapsulation must match decapsulation result. 
-			// NOTE: memcmp is used here for testing only (not constant-time).
-			if(memcmp(mass_K_encaps, mass_K_decaps, ML_KEM_SEED_BYTES) != 0)
-			{
-				printf("\nWrong! In %zu vector, in ML-KEM-%zu level sequrity!(whith pool for encaps)", vectors_counter, level_counter);
-			}else{
-				printf("\nDone.... In %zu vector, in ML-KEM-%zu level sequrity is identical with vector NIST(whith pool for encaps)....", vectors_counter, level_counter);
-			}
-			
-			// Cleanup resources
-			ml_kem_encaps_pool_destroy(pool_encaps_ctx);
-			ml_kem_destroy_core(this_ctx);
-			
+			ml_kem_destroy_core(ctx);
 			vectors_counter++;
-		}
+		}else if(strstr(buffer, "\"tgId\": 7")) { break; }
 	}
 	printf("\n");	
 	printf("...................................................................................................................................................\n");

@@ -10,7 +10,8 @@ CFLAGS = -std=c11 \
           -DUSERSPACE \
           -I. \
           -I../../src \
-          -I../../ports/userspace 
+          -I../../ports/userspace \
+          -DFULL_MATRIX=0
 
 # --------------------------------------------------------------------
 # Shared ML-KEM sources
@@ -18,7 +19,7 @@ CFLAGS = -std=c11 \
 
 LIB_SRC = \
 	../../ports/userspace/ml_kem_userspace_port.c \
-	../../src/keccak1600.c \
+	../../src/keccak_1600.c \
 	../../src/ml_kem.c \
 	../../src/ml_kem_create_keys.c \
 	../../src/ml_kem_decrypt.c \

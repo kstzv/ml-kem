@@ -9,14 +9,15 @@ CFLAGS = -std=c11 \
           -g \
           -fsanitize=address \
           -I../../src \
-          -I../../ports/userspace 
+          -I../../ports/userspace \
+          -DFULL_MATRIX=0
 
 TARGET = test
 
 SRC = \
 	test.c \
 	../../ports/userspace/ml_kem_userspace_port.c \
-	../../src/keccak1600.c \
+	../../src/keccak_1600.c \
 	../../src/ml_kem.c \
 	../../src/ml_kem_create_keys.c \
 	../../src/ml_kem_decrypt.c \

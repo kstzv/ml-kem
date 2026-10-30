@@ -57,12 +57,14 @@ static void init_ctx(void)
 {
     static u8 raw_bytes[ML_KEM_VECTOR_XOF_BYTES_L34];
     static u16 y[ML_KEM_N * ML_KEM_1024];
+    static u64 keccak_state[ML_KEM_KECCAK_STATE_BYTES / sizeof(u64)];
 
     memset(&kem_ctx, 0, sizeof(kem_ctx));
 
     kem_ctx.k = ML_KEM_1024; 
     kem_ctx.raw_bytes = raw_bytes;
     kem_ctx.y = y;
+    shake_ctx_get_mem(&kem_ctx.shake, keccak_state, ML_KEM_KECCAK_STATE_BYTES / sizeof(u64));
 }
 
 // Filling in the appropriate fields before each iteration dudect

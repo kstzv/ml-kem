@@ -1,3 +1,4 @@
+
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -53,8 +54,21 @@ void randombytes(u8 *x, size_t how_much)
 // Output buffer for SHA3-512
 static u8 sha3_out[64];
 
+// SHA3 context and Keccak-f[1600] state
+static struct sha3_ctx sha_ctx;
+static u64 keccak_state[ML_KEM_KECCAK_STATE_BYTES / sizeof(u64)];
+
 // Prevent compiler optimization
 static volatile u8 dudect_sink = 0;
+
+// Initialize SHA3 context
+static int init_ctx(void)
+{
+    memset(&sha_ctx, 0, sizeof(sha_ctx));
+
+    return sha3_ctx_get_mem(&sha_ctx, keccak_state,
+                           ML_KEM_KECCAK_STATE_BYTES / sizeof(u64));
+}
 
 // class 0 -> fixed input
 // class 1 -> random input
@@ -82,8 +96,11 @@ u8 do_one_computation(u8 *data)
     // Clear previous output
     memset(sha3_out, 0, sizeof(sha3_out));
 
+    // Initialize SHA3 parameters and reset Keccak state
+    sha3_ctx_init(&sha_ctx, data, INPUT_SIZE, sha3_out);
+
     // Target function
-    ml_kem_sha3_512(sha3_out, data, INPUT_SIZE);
+    sha3_512(&sha_ctx);
 
     // Reduce output to one byte, preventing dead-code elimination.
     u8 acc = 0;
@@ -105,6 +122,10 @@ int main(void)
     dudect_config_t config;
     dudect_state_t state;
 
+    if(init_ctx() != 0) {
+        return 1;
+    }
+
     config.chunk_size = INPUT_SIZE;
     config.number_measurements = 50000;
 
@@ -118,3 +139,4 @@ int main(void)
 
     return 0;
 }
+

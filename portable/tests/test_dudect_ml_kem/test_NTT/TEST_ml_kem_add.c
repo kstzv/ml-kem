@@ -48,21 +48,39 @@ static u16 result_poly[ML_KEM_N];
 // prevent optimization 
 static volatile u8 dudect_sink = 0;
 
-// Filling in the appropriate fields before each iteration dudect
+static u64 rng_class_state = 0x123456789ABCDEF0ULL;
+static u64 rng_data_state  = 0xFEDCBA9876543210ULL;
+
+static u64 rng_next(u64 *state)
+{
+    u64 x = *state;
+
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+
+    return *state = x;
+}
+
 void prepare_inputs(dudect_config_t *c, u8 *input_data, u8 *classes)
 {
-    for (size_t i = 0; i < c->number_measurements; i++)
+    for(size_t i = 0; i < c->number_measurements; i++)
     {
         u8 *input = input_data + i * c->chunk_size;
 
-        classes[i] = randombit();
+        classes[i] = (u8)(rng_next(&rng_class_state) & 1u);
 
-        if (classes[i] == 0)
+        for(size_t j = 0; j < 2 * ML_KEM_N; j++)
         {
-            memset(input, 0x00, c->chunk_size);
-        }else
-        {
-            randombytes(input, c->chunk_size);
+            u16 value = (u16)(
+                rng_next(&rng_data_state) % ML_KEM_Q
+            );
+
+            if(classes[i] == 0)
+                value = 0;
+
+            memcpy(input + j * sizeof(u16),
+                   &value, sizeof(value));
         }
     }
 }
@@ -70,24 +88,15 @@ void prepare_inputs(dudect_config_t *c, u8 *input_data, u8 *classes)
 // Run in dudect function for test
 u8 do_one_computation(u8 *data)
 {
-    size_t half = sizeof(u16) * ML_KEM_N;
+    const size_t half = sizeof(u16) * ML_KEM_N;
 
-    // split input
     memcpy(first_poly, data, half);
     memcpy(second_poly, data + half, half);
 
-    // target function 
     ml_kem_add(result_poly, first_poly, second_poly);
 
-    // reduce to single byte 
-    u8 acc = 0;
-    for (size_t i = 0; i < ML_KEM_N; i++)
-    {
-        acc ^= (u8)result_poly[i];
-        acc ^= (u8)(result_poly[i] >> 8);
-    }
+    dudect_sink = (u8)result_poly[0];
 
-    dudect_sink ^= acc;
     return dudect_sink;
 }
 

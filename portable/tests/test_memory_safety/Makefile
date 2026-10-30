@@ -22,13 +22,14 @@ CORE_FILES := \
     ml_kem_ntt_main.c \
     ml_kem_sha3.c \
     ml_kem_shake.c \
-    keccak1600.c \
+    keccak_1600.c \
     ml_kem_decaps_pool.c \
     ml_kem_encaps_pool.c
 
 COMMON_FLAGS := -std=c11 -O1 -g -Wall -Wextra \
                 -fno-omit-frame-pointer -fno-optimize-sibling-calls \
                 -fPIE -pthread -DUSERSPACE \
+                -DFULL_MATRIX=0 \
                 -I"$(CORE_DIR)" -I"$(PORT_DIR)"
 
 SAN_FLAGS_asan := -fsanitize=address

@@ -1,3 +1,4 @@
+
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -56,9 +57,21 @@ void randombytes(u8 *x, size_t how_much)
 // Output buffer for SHAKE128
 static u8 shake_out[OUTPUT_SIZE];
 
+// SHAKE context and Keccak-f[1600] state
+static struct shake_ctx shake_ctx;
+static u64 keccak_state[ML_KEM_KECCAK_STATE_BYTES / sizeof(u64)];
+
 // Prevent compiler optimization
 static volatile u8 dudect_sink = 0;
 
+// Initialize SHAKE context
+static int init_ctx(void)
+{
+    memset(&shake_ctx, 0, sizeof(shake_ctx));
+
+    return shake_ctx_get_mem(&shake_ctx, keccak_state,
+                             ML_KEM_KECCAK_STATE_BYTES / sizeof(u64));
+}
 
 // class 0 -> fixed input
 // class 1 -> random input
@@ -86,10 +99,16 @@ u8 do_one_computation(u8 *data)
     // Clear previous output
     memset(shake_out, 0, sizeof(shake_out));
 
-    // Target function
-    ml_kem_shake128(shake_out, OUTPUT_SIZE, data, INPUT_SIZE);
+    // Reset Keccak state before each independent computation
+    shake_ctx_zero(&shake_ctx);
 
-     // Reduce output to one byte, preventing dead-code elimination
+    // Initialize SHAKE parameters
+    shake_ctx_init(&shake_ctx, data, INPUT_SIZE, shake_out, OUTPUT_SIZE);
+
+    // Target function
+    shake128(&shake_ctx);
+
+    // Reduce output to one byte, preventing dead-code elimination
     u8 acc = 0;
 
     for(size_t i = 0; i < sizeof(shake_out); i++)
@@ -109,6 +128,10 @@ int main(void)
     dudect_config_t config;
     dudect_state_t state;
 
+    if(init_ctx() != 0) {
+        return 1;
+    }
+
     config.chunk_size = INPUT_SIZE;
     config.number_measurements = 50000;
 
@@ -122,3 +145,4 @@ int main(void)
 
     return 0;
 }
+

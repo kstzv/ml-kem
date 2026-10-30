@@ -57,6 +57,7 @@ static void init_temp(void)
 {
     static u8 raw_bytes[ML_KEM_VECTOR_XOF_BYTES_L2];
     static u16 secret[ML_KEM_N * ML_KEM_512];
+    static u64 keccak_state[ML_KEM_KECCAK_STATE_BYTES / sizeof(u64)];
 
     memset(&temp, 0, sizeof(temp));
 
@@ -65,6 +66,7 @@ static void init_temp(void)
     temp.number_raw_bytes_vectors = ML_KEM_VECTOR_XOF_BYTES_L2;
     temp.raw_bytes = raw_bytes;
     temp.secret = secret;
+    shake_ctx_get_mem(&temp.shake, keccak_state, ML_KEM_KECCAK_STATE_BYTES / sizeof(u64));
 }
 
 // Filling in the appropriate fields before each iteration dudect

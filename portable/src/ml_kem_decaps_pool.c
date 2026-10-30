@@ -14,6 +14,9 @@ bool try_acquire_slot(ml_kem_atomic_t *is_free);
 STATIC struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_head_decaps_pool(size_t ml_kem_pool_count);
 STATIC u16 *ml_kem_get_mem_two_bytes_ptrs_encaps(struct ml_kem_encaps_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level);
 STATIC u16 *ml_kem_get_mem_two_bytes_ptrs_decrypt(struct ml_kem_decrypt_ctx *ctx, u16 *two_bytes_ptrs, enum ml_kem_k level);
+#if FULL_MATRIX
+STATIC u16 *get_full_matrix(struct ml_kem_ctx *ctx_keys, struct ml_kem_general_keys_decaps_ctx *ctx_global);
+#endif
 
 // Allocate and initialize the entire decapsulation pool.
 // This is the main entry point that prepares all memory required for parallel decapsulation.
@@ -72,9 +75,9 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k le
 	
 	// Allocate buffer for raw XOF output (used during polynomial generation)
 	u8 *raw_bytes;
-	raw_bytes = ml_kem_alloc(ML_KEM_MATRIX_XOF_BYTES * ml_kem_pool_count);
+	raw_bytes = ml_kem_alloc((ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES) * ml_kem_pool_count);
 	if(!raw_bytes) { goto fifth_error_exit; }
-	ml_kem_memzero(raw_bytes, ML_KEM_MATRIX_XOF_BYTES * ml_kem_pool_count);
+	ml_kem_memzero(raw_bytes, (ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES) * ml_kem_pool_count);
 	head_pool->raw_bytes_mem_ptr = raw_bytes;
 	
 	// Allocate contiguous memory for all u16-based working buffers (polynomials, vectors, etc.)
@@ -113,7 +116,9 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k le
 		e->public_key_msg = public_key_msgs + i * public_key_msg_len;
 		memcpy(e->public_key_msg, private_keys->public_key_msg, public_key_msg_len);
 		e->k = level;
-		e->raw_bytes = raw_bytes + i * ML_KEM_MATRIX_XOF_BYTES;
+		e->raw_bytes = raw_bytes + i * (ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES);
+		sha3_ctx_get_mem(&e->sha3, (u64 *)(e->raw_bytes + ML_KEM_MATRIX_XOF_BYTES), ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
+		shake_ctx_get_mem(&e->shake, (u64 *)(e->raw_bytes + ML_KEM_MATRIX_XOF_BYTES), ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
 		e->err = 0;
 		
 		// Assign u16 working memory regions for both contexts
@@ -124,9 +129,21 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k le
 		ml_kem_unpack_pk_t_u16(e);
 	}
 	
+	#if FULL_MATRIX
+	u16 *full_matrix;
+	full_matrix = get_full_matrix(head_pool->ml_kem_pool[0].decrypt_ctx->ctx, head_pool);
+	if(!full_matrix) { goto seventh_exit; }
+	
+	for(size_t i = 0; i < ml_kem_pool_count; i++) { head_pool->ml_kem_pool[i].encaps_ctx->full_matrix = full_matrix; }
+	#endif
+	
 	return head_pool;
 	
 	// Error handling with reverse-order cleanup 
+	#if FULL_MATRIX
+	seventh_exit:
+		ml_kem_free(two_bytes_ptrs);
+	#endif
 	sixth_error_exit:
 		ml_kem_free(raw_bytes);
 	fifth_error_exit:
@@ -250,6 +267,47 @@ STATIC struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_head_decaps_pool(size
 	return head_pool;
 }
 
+#if FULL_MATRIX
+STATIC u16 *get_full_matrix(struct ml_kem_ctx *ctx_keys, struct ml_kem_general_keys_decaps_ctx *ctx_global)
+{
+	if(!ctx_keys || !ctx_global) { return NULL; }
+	
+	u16 *matrix;
+	matrix = ml_kem_alloc(ctx_keys->k * ctx_keys->k * ML_KEM_N * sizeof(u16));
+	if(!matrix) { return NULL; }
+	
+	u8 local_seed_m[ML_KEM_SEED_BYTES + 2];
+	memcpy(local_seed_m, ctx_keys->seed_rho, ML_KEM_SEED_BYTES);
+	for(u8 i = 0; i < ctx_keys->k; i++)
+	{
+		for(u8 j = 0; j < ctx_keys->k; j++)
+		{
+			local_seed_m[32] = i;
+			local_seed_m[33] = j;
+			
+			// Expand seed using SHAKE128 to obtain raw bytes for matrix polynomial
+			shake_ctx_zero(&ctx_global->ml_kem_pool[0].encaps_ctx->shake);
+			shake_ctx_init(&ctx_global->ml_kem_pool[0].encaps_ctx->shake, local_seed_m, ML_KEM_SEED_BYTES + 2, 
+				ctx_global->ml_kem_pool[0].encaps_ctx->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
+				
+			int poly_counter = 0;
+			do{
+				shake128(&ctx_global->ml_kem_pool[0].encaps_ctx->shake);
+				poly_counter += ml_kem_gen_polynomial_for_matrix((matrix + (i * ctx_keys->k + j) * ML_KEM_N) + poly_counter, 
+					ctx_global->ml_kem_pool[0].encaps_ctx->raw_bytes, ML_KEM_MATRIX_XOF_BYTES, (int)ML_KEM_N - poly_counter);
+					
+				if(poly_counter >= ML_KEM_N) { break; }
+			}while(poly_counter < ML_KEM_N);
+			
+		}
+	}
+	
+	ctx_global->full_matrix_ptr = matrix;
+	return matrix;
+}
+#endif
+	
+
 // Destroy the entire pool and securely wipe all associated memory.
 // This includes:
 // - all shared buffers
@@ -274,7 +332,7 @@ void ml_kem_pool_destroy(struct ml_kem_general_keys_decaps_ctx *head_pool)
 	// Wipe and free raw XOF byte buffers used in encapsulation
 	if(head_pool->raw_bytes_mem_ptr)
 	{
-		ml_kem_memzero(head_pool->raw_bytes_mem_ptr, head_pool->ml_kem_pool_count * ML_KEM_MATRIX_XOF_BYTES);
+		ml_kem_memzero(head_pool->raw_bytes_mem_ptr, head_pool->ml_kem_pool_count * (ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES));
 		ml_kem_free(head_pool->raw_bytes_mem_ptr);
 	}
 	
@@ -308,6 +366,10 @@ void ml_kem_pool_destroy(struct ml_kem_general_keys_decaps_ctx *head_pool)
 	
 	// Free slot descriptors
 	if(head_pool->ml_kem_pool) { ml_kem_free(head_pool->ml_kem_pool); }
+	
+	#if FULL_MATRIX
+	ml_kem_free(head_pool->full_matrix_ptr);
+	#endif
 	
 	// Finally free the pool head itself
 	ml_kem_free(head_pool);

@@ -11,15 +11,14 @@
 // Benchmark parameters and shared input/output buffers
 #define NUMBER_ITERATIONS 100000
 #define NUMBER_THREADS 16
-
 u8 shared_secrets[NUMBER_ITERATIONS][ML_KEM_SEED_BYTES];
-u8 ciphertexts[NUMBER_ITERATIONS][LEN_CIPHERTEXT_1024];
+u8 ciphertexts[NUMBER_ITERATIONS][LEN_CIPHERTEXT_512];
 
 atomic_size_t current_index = 0;
 
 // Arguments passed to each worker thread
 struct thread_args {
-    struct ml_kem_pool_decaps_ctx *ctx_keys;
+    struct ml_kem_general_keys_decaps_ctx *ctx_keys;
 };
 
 // Worker thread: performs decapsulation and verifies shared secrets
@@ -35,7 +34,7 @@ void *worker(void *arg)
 
         if(idx >= NUMBER_ITERATIONS) { break; }
 
-        int ret = ml_kem_decaps_core(args->ctx_keys, ciphertexts[idx], LEN_CIPHERTEXT_1024, decaps_shared_secret, ML_KEM_SEED_BYTES);
+        int ret = ml_kem_decaps_core(args->ctx_keys, ciphertexts[idx], LEN_CIPHERTEXT_512, decaps_shared_secret, ML_KEM_SEED_BYTES );
         if(ret != 0)
         {
             printf("Decapsulation error\n");
@@ -56,20 +55,19 @@ void *worker(void *arg)
 int main()
 {
 	// Create keys
-	struct ml_kem_pool_decaps_ctx  *ctx_keys;
-	ctx_keys = ml_kem_create_object(ML_KEM_1024, NUMBER_THREADS, NULL);
+	struct ml_kem_general_keys_decaps_ctx  *ctx_keys;
+	ctx_keys = ml_kem_create_object(ML_KEM_512, NUMBER_THREADS, NULL);
 	if(!ctx_keys) { printf("Error in ml_kem_create_object()\n"); return -1; }
 	
 	// Create ciphertexts
-	u8 *temp_ciphertext;
+	int ret;
+	u8 pk[RES_PUBL_PART_LVL_512];
+	ret = ml_kem_get_public_key(ctx_keys, pk, RES_PUBL_PART_LVL_512);
+	if(ret != 0) { printf("Error in ml_kem_get_public_key()\n"); ml_kem_destroy_core(ctx_keys); return -1; }
 	for(size_t i = 0; i < NUMBER_ITERATIONS; i++)
 	{
-		temp_ciphertext = ml_kem_encaps_core(ctx_keys->ml_kem_pool[0].decrypt_ctx->ctx->public_key_msg, ML_KEM_1024, shared_secrets[i], NULL);
-		if(!temp_ciphertext) { printf("Error in ml_kem_encaps_core()\n"); ml_kem_destroy_core(ctx_keys); return -1; }
-		
-		memcpy(ciphertexts[i], temp_ciphertext, LEN_CIPHERTEXT_1024);
-		ml_kem_ciphertext_destroy_core(temp_ciphertext, ML_KEM_1024);
-		temp_ciphertext = NULL;
+		ret = ml_kem_encaps_core(NULL, pk, RES_PUBL_PART_LVL_512, ciphertexts[i], LEN_CIPHERTEXT_512, shared_secrets[i], ML_KEM_SEED_BYTES, NULL);
+		if(ret != 0) { printf("Error in ml_kem_encaps_core()\n"); ml_kem_destroy_core(ctx_keys); return -1; }
 	}
 	
 	pthread_t threads[NUMBER_THREADS];
@@ -77,7 +75,6 @@ int main()
 	args.ctx_keys = ctx_keys;
 	
 	atomic_store(&current_index, 0);
-	int ret;
 	
 	struct timespec start;
 	struct timespec end;

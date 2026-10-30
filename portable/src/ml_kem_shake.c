@@ -11,139 +11,161 @@
 
 #include "ml_kem_core_header.h"
 
-struct ml_kem_sponge {
-	u64 st[25];
-	size_t rate;
-	size_t pos;
-	u8 delim;
-	bool squeezing;
-};
 
-void ml_kem_shake128(u8 *out, size_t outlen, const u8 *in, size_t inlen);
-void ml_kem_shake256(u8 *out, size_t outlen, const u8 *in, size_t inlen);
 
-STATIC inline u64 ml_kem_load64_le(const u8 *src)
+int shake_ctx_get_mem(struct shake_ctx *ctx, u64 *state, size_t size_mem);
+void shake_ctx_init(struct shake_ctx *ctx, const u8 *in, size_t inlen, u8 *out, size_t outlen);
+void shake_ctx_zero(struct shake_ctx *ctx);
+void shake128(struct shake_ctx *ctx);
+void shake256(struct shake_ctx *ctx);
+
+void shake_absorb(struct shake_ctx *ctx);
+static void shake_finalize(struct shake_ctx *ctx);
+static void shake_squeeze(struct shake_ctx *ctx);
+
+int shake_ctx_get_mem(struct shake_ctx *ctx, u64 *state, size_t size_mem)
 {
-	return ((u64)src[0]      ) |
-	       ((u64)src[1] <<  8) |
-	       ((u64)src[2] << 16) |
-	       ((u64)src[3] << 24) |
-	       ((u64)src[4] << 32) |
-	       ((u64)src[5] << 40) |
-	       ((u64)src[6] << 48) |
-	       ((u64)src[7] << 56);
+	if(!ctx || !state || size_mem != 25) { return -1; }
+	ctx->state = state;
+    ctx->rate = 0;
+    ctx->pos = 0;
+    ctx->in = NULL;
+    ctx->inlen = 0;
+    ctx->out = NULL;
+    ctx->outlen = 0;
+	return 0;
 }
 
-STATIC inline void ml_kem_store64_le(u8 *dst, u64 x)
+void shake_ctx_init(struct shake_ctx *ctx, const u8 *in, size_t inlen, u8 *out, size_t outlen)
 {
-	dst[0] = (u8)(x);
-	dst[1] = (u8)(x >>  8);
-	dst[2] = (u8)(x >> 16);
-	dst[3] = (u8)(x >> 24);
-	dst[4] = (u8)(x >> 32);
-	dst[5] = (u8)(x >> 40);
-	dst[6] = (u8)(x >> 48);
-	dst[7] = (u8)(x >> 56);
+    ctx->rate = 0;
+    ctx->pos = 0;
+
+    ctx->in = in;
+    ctx->inlen = inlen;
+
+    ctx->out = out;
+    ctx->outlen = outlen;
 }
 
-STATIC void ml_kem_sponge_init(struct ml_kem_sponge *S, size_t rate, u8 delim)
+// Clear the 1600-bit Keccak state and reset the context
+void shake_ctx_zero(struct shake_ctx *ctx)
 {
-	memset(S, 0, sizeof(*S));
-	S->rate = rate;
-	S->delim = delim;
+    if (ctx == NULL || ctx->state == NULL) { return; }
+
+    // 25 lanes x 8 bytes
+    volatile u8 *p = (volatile u8 *)ctx->state;
+    size_t len = 200;
+    while (len--) { *p++ = 0; }
+    ctx->in = NULL;
+    ctx->inlen = 0;
+    ctx->out = NULL;
+    ctx->outlen = 0;
+    ctx->pos = 0;
+    ctx->rate = 0;
 }
 
-STATIC void ml_kem_sponge_absorb(struct ml_kem_sponge *S, const u8 *in, size_t inlen)
+void shake128(struct shake_ctx *ctx)
 {
-	size_t i;
-	const size_t rate = S->rate;
+    ctx->rate = 168;
 
-	/* Fast path: absorb complete rate blocks as 64-bit little-endian lanes. */
-	while (inlen >= rate) {
-		for (i = 0; i < rate / 8; i++)
-			S->st[i] ^= ml_kem_load64_le(in + 8 * i);
+    // Continue squeezing an already finalized state
+    if (ctx->pos != 0) 
+    {
+        shake_squeeze(ctx);
+        return;
+    }
 
-		keccak_f1600_ct(S->st);
-		in += rate;
-		inlen -= rate;
-	}
+    shake_absorb(ctx);
+    shake_finalize(ctx);
 
-	/* Remaining partial block. First consume full lanes. */
-	for (i = 0; i < inlen / 8; i++)
-		S->st[i] ^= ml_kem_load64_le(in + 8 * i);
+    ctx->pos = 0;
 
-	S->pos = 8 * i;
-	in += S->pos;
-	inlen -= S->pos;
-
-	/* Tail: at most 7 bytes. */
-	for (i = 0; i < inlen; i++) {
-		const size_t pos = S->pos;
-
-		S->st[pos >> 3] ^= (u64)in[i] << (8 * (pos & 7U));
-		S->pos = pos + 1;
-	}
+    shake_squeeze(ctx);
 }
 
-STATIC void ml_kem_sponge_finalize(struct ml_kem_sponge *S)
+void shake256(struct shake_ctx *ctx)
 {
-	const size_t pos = S->pos;
+    ctx->rate = 136;
 
-	// Apply SHAKE domain separation and multi-rate padding
-	S->st[pos >> 3] ^= (u64)S->delim << (8 * (pos & 7U));
-	S->st[(S->rate - 1) >> 3] ^= (u64)0x80 << (8 * ((S->rate - 1) & 7U));
+    // Continue squeezing an already finalized state
+    if (ctx->pos != 0) 
+    {
+        shake_squeeze(ctx);
+        return;
+    }
 
-	keccak_f1600_ct(S->st);
-	S->pos = 0;
-	S->squeezing = true;
+    shake_absorb(ctx);
+    shake_finalize(ctx);
+
+    ctx->pos = 0;
+
+    shake_squeeze(ctx);
 }
 
-STATIC void ml_kem_sponge_squeeze(struct ml_kem_sponge *S, u8 *out, size_t outlen)
+// Absorb input into the rate portion of the Keccak state
+void shake_absorb(struct shake_ctx *ctx)
 {
-	while (outlen > 0) {
-		if (S->pos == S->rate) {
-			keccak_f1600_ct(S->st);
-			S->pos = 0;
-		}
+    u8 *s = (u8 *)ctx->state;
 
-		/* Fast path: output complete aligned 64-bit lanes. */
-		if ((S->pos & 7U) == 0 && outlen >= 8 && S->pos + 8 <= S->rate) {
-			ml_kem_store64_le(out, S->st[S->pos >> 3]);
-			S->pos += 8;
-			out += 8;
-			outlen -= 8;
-			continue;
-		}
+    while (ctx->inlen > 0)
+    {
+        size_t n = ctx->rate - ctx->pos;
 
-		*out++ = (u8)(S->st[S->pos >> 3] >> (8 * (S->pos & 7U)));
-		S->pos++;
-		outlen--;
-	}
+        if (n > ctx->inlen) { n = ctx->inlen; }
+
+        for (size_t i = 0; i < n; i++) { s[ctx->pos + i] ^= ctx->in[i]; }
+
+        ctx->pos += n;
+        ctx->in += n;
+        ctx->inlen -= n;
+
+        // Permute after absorbing a complete rate block
+        if (ctx->pos == ctx->rate)
+        {
+            keccak_f1600(ctx->state);
+            ctx->pos = 0;
+        }
+    }
 }
 
-// SHAKE128: rate = 168 bytes, domain separator = 0x1F
-void ml_kem_shake128(u8 *out, size_t outlen, const u8 *in, size_t inlen)
+// Apply SHAKE domain separation and pad10*1 padding
+static void shake_finalize(struct shake_ctx *ctx)
 {
-	struct ml_kem_sponge S;
+    u8 *s = (u8 *)ctx->state;
 
-	ml_kem_sponge_init(&S, 168, 0x1F);
-	ml_kem_sponge_absorb(&S, in, inlen);
-	ml_kem_sponge_finalize(&S);
-	ml_kem_sponge_squeeze(&S, out, outlen);
+    s[ctx->pos] ^= 0x1F;     // SHAKE domain separator
+    s[ctx->rate - 1] ^= 0x80;// Final padding bit
 
-	ml_kem_memzero(&S, sizeof(S));
+    keccak_f1600(ctx->state);
 }
 
-// SHAKE256: rate = 136 bytes, domain separator = 0x1F
-void ml_kem_shake256(u8 *out, size_t outlen, const u8 *in, size_t inlen)
+// Extract output from the rate portion, permuting as needed
+static void shake_squeeze(struct shake_ctx *ctx)
 {
-	struct ml_kem_sponge S;
+    u8 *s = (u8 *)ctx->state;
 
-	ml_kem_sponge_init(&S, 136, 0x1F);
-	ml_kem_sponge_absorb(&S, in, inlen);
-	ml_kem_sponge_finalize(&S);
-	ml_kem_sponge_squeeze(&S, out, outlen);
+    size_t local_outlen = ctx->outlen;
+    u8 *local_ptr_out = ctx->out;
 
-	ml_kem_memzero(&S, sizeof(S));
+    while (local_outlen > 0)
+    {
+        // Generate the next output block when the rate is exhausted
+        if (ctx->pos == ctx->rate)
+        {
+            keccak_f1600(ctx->state);
+            ctx->pos = 0;
+        }
+
+        size_t n = ctx->rate - ctx->pos;
+
+        if (n > local_outlen) { n = local_outlen; }
+
+        for (size_t i = 0; i < n; i++) { local_ptr_out[i] = s[ctx->pos + i]; }
+
+        ctx->pos += n;
+        local_ptr_out += n;
+        local_outlen -= n;
+    }
 }
 

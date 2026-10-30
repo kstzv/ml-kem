@@ -55,7 +55,8 @@ typedef int (*ml_kem_entropy_fn)(void *buf, size_t len);
 #define ML_KEM_Q_HALF  (ML_KEM_Q >> 1)
 
 // XOF buffer sizes (chosen with margin to ensure sufficient output in a single pass)
-#define ML_KEM_MATRIX_XOF_BYTES         1024 // Raw bytes buffer for a single matrix polynomial (sufficient upper bound)
+#define ML_KEM_MATRIX_XOF_BYTES         576  // Raw bytes buffer for a single matrix polynomial (sufficient upper bound)
+#define ML_KEM_KECCAK_STATE_BYTES 		200  // Raw bytes for keccak1600
 #define ML_KEM_VECTOR_XOF_BYTES_L2      192  // Raw bytes buffer for vector polynomial (level 2)
 #define ML_KEM_VECTOR_XOF_BYTES_L34     128  // Raw bytes buffer for vector polynomial (levels 3 and 5)
 
@@ -142,6 +143,31 @@ enum ml_kem_k {
     ML_KEM_1024 = 4,
 };
 
+// Reusable SHA3 context with externally supplied Keccak state
+struct sha3_ctx {
+    u64 *state;
+    size_t rate;
+    size_t pos;
+
+    const u8 *in;
+    size_t inlen;
+
+    u8 *out;
+};
+
+// Reusable SHAKE context with externally supplied Keccak state
+struct shake_ctx {
+    u64 *state;
+    size_t rate;
+    size_t pos;
+
+    const u8 *in;
+    size_t inlen;
+
+    u8 *out;
+    size_t outlen;
+};
+
 // Persistent key context for ML-KEM
 struct ml_kem_ctx {
 	u8 seed_rho[ML_KEM_SEED_BYTES];  // Seed used to deterministically generate matrix A
@@ -164,6 +190,8 @@ struct ml_kem_temp {
 	u8 *raw_bytes;                    // Raw byte buffer (XOF output)
 	size_t number_raw_bytes_vectors;  // Size of raw buffer for vectors (depends on level)
 	u8 eta;                           // CBD parameter (bits per coefficient)
+	struct shake_ctx shake;           // struct for shake operations
+	struct sha3_ctx  sha3;			  // struct for sha3 operations
 };
 
 // Encapsulation context (used both for client encapsulation and internal re-encapsulation in decapsulation)
@@ -183,6 +211,11 @@ struct ml_kem_encaps_ctx {
 	size_t ciphertext_len;            // Ciphertext length
 	u8 *raw_bytes;                    // XOF buffer for polynomial generation
 	s16 err;                          // Check errors in functions encapsulations
+	struct shake_ctx shake;           // struct for shake operations
+	struct sha3_ctx  sha3;			  // struct for sha3 operations
+	#if FULL_MATRIX
+	u16 *full_matrix;                 // full matrix for edecaps
+	#endif
 };
 
 // Decryption context (used during decapsulation)
@@ -200,7 +233,7 @@ struct ml_kem_decrypt_ctx {
 struct ml_kem_decaps_ctx {
 	struct ml_kem_encaps_ctx *encaps_ctx;               // Encapsulation context
 	struct ml_kem_decrypt_ctx *decrypt_ctx;             // Decryption context
-	u8 kdf_buf[LEN_CIPHERTEXT_1024 + ML_KEM_SEED_BYTES];// Buffer for KDF (z-based fallback)
+	u8 buff_for_rate[136];								// Buffer for first shake256(rate == 136)
 	ml_kem_atomic_t is_free;                            // Atomic flag for slot availability
 };
 
@@ -219,6 +252,9 @@ struct ml_kem_general_keys_decaps_ctx {
 	u8 *raw_bytes_mem_ptr;
 	struct ml_kem_decrypt_ctx *decrypt_mem_ptr;
 	struct ml_kem_encaps_ctx *encaps_mem_ptr;
+	#if FULL_MATRIX
+	u16 *full_matrix_ptr;                 // full matrix for decaps, need for destructor
+	#endif
 };
 
 // Single encapsulation slot
@@ -270,15 +306,22 @@ extern void ml_kem_intt_fips203(u16 f[ML_KEM_N]);
 extern void ml_kem_ntt_fips203(u16 f[ML_KEM_N]);
 
 // SHA3 wrappers (File #6)
-extern void ml_kem_sha3_512(u8 out[64], const u8 *in, size_t inlen);
-extern void ml_kem_sha3_256(u8 out[32], const u8 *in, size_t inlen);
+extern int sha3_ctx_get_mem(struct sha3_ctx *ctx, u64 *state, size_t size_mem);
+extern void sha3_ctx_init(struct sha3_ctx *ctx, const u8 *in, size_t inlen, u8 *out);
+extern void sha3_256(struct sha3_ctx *ctx);
+extern void sha3_512(struct sha3_ctx *ctx);
 	
 // SHAKE wrappers (File #7)
-extern void ml_kem_shake128(u8 *out, size_t outlen, const u8 *in, size_t inlen);
-extern void ml_kem_shake256(u8 *out, size_t outlen, const u8 *in, size_t inlen);
+extern int shake_ctx_get_mem(struct shake_ctx *ctx, u64 *state, size_t size_mem);
+extern void shake_ctx_init(struct shake_ctx *ctx, const u8 *in, size_t inlen, u8 *out, size_t outlen);
+extern void shake_ctx_zero(struct shake_ctx *ctx);
+extern void shake128(struct shake_ctx *ctx);
+extern void shake256(struct shake_ctx *ctx);
+
+extern void shake_absorb(struct shake_ctx *ctx);
 
 // Keccak-f[1600] permutation (File #8)
-extern void keccak_f1600_ct(u64 state[25]);
+extern void keccak_f1600(u64 state[25]);
 
 // Decapsulation pool API (File #9)
 extern struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k level, size_t ml_kem_pool_count, struct ml_kem_ctx *private_keys);
@@ -433,7 +476,7 @@ static inline void ml_kem_gen_polynomial_for_cbd(u16 *poly, const u8 *stream, co
 // NOTE:
 //   If input bytes are insufficient, function returns -ENOMEM.
 //   Caller is expected to extend the stream (e.g., via SHAKE) and retry.
-static inline int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, int suma_bytes)
+static inline int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, int suma_bytes, int need_coeff)
 {
 	int j = 0;		// Output coefficient index
 	size_t pos = 0; // Position in input stream
@@ -443,15 +486,14 @@ static inline int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, 
 	u16 d2 = 0;
         
 	// Generate ML_KEM_N coefficients
-	while (j < ML_KEM_N)
+	while (j < need_coeff && suma_bytes >= 3)
 	{
-		if(suma_bytes < 3) { return -ENOMEM; } 			 // Need at least 3 bytes to extract two candidates
 		d1 = stream[pos] | ((stream[pos+1] & 0xF) << 8); // Extract first 12-bit value: byte0 + lower 4 bits of byte1
 		d2 = (stream[pos+1] >> 4) | (stream[pos+2] << 4);// Extract second 12-bit value: upper 4 bits of byte1 + byte2
 
 		// Accept values strictly less than q
 		if (d1 < ML_KEM_Q) { poly[j++] = d1; }
-        if (d2 < ML_KEM_Q && j < ML_KEM_N) { poly[j++] = d2; }
+        if (d2 < ML_KEM_Q && j < need_coeff) { poly[j++] = d2; }
 
 		// Advance stream position
         pos += 3;
@@ -463,7 +505,7 @@ static inline int ml_kem_gen_polynomial_for_matrix(u16 *poly, const u8 *stream, 
         suma_bytes -= 3;
 	} 
 
-	return suma_bytes;
+	return j;
 }
 
 #ifdef ML_KEM_DUDECT_TEST

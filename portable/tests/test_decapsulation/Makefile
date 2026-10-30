@@ -5,12 +5,13 @@ CFLAGS = -O3 -Wall -Wextra -std=c11 \
 		 -DML_KEM_TEST \
           -I. \
           -I../../src \
-          -I../../ports/userspace 
+          -I../../ports/userspace \
+          -DFULL_MATRIX=0
 
 SRC_CORE = \
 	../../ports/userspace/ml_kem_userspace_port.c \
 	../../src/ml_kem_create_keys.c \
-    ../../src/keccak1600.c \
+    ../../src/keccak_1600.c \
     ../../src/ml_kem.c \
     ../../src/ml_kem_decrypt.c \
     ../../src/ml_kem_encaps.c \

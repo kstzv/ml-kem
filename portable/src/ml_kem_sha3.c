@@ -12,135 +12,108 @@
 
 #include "ml_kem_core_header.h"
 
-struct ml_kem_sha3_ctx {
-	u64 st[25];
-	size_t rate;
-	size_t pos;
-};
+int sha3_ctx_get_mem(struct sha3_ctx *ctx, u64 *state, size_t size_mem);
+void sha3_ctx_init(struct sha3_ctx *ctx, const u8 *in, size_t inlen, u8 *out);
+void sha3_256(struct sha3_ctx *ctx);
+void sha3_512(struct sha3_ctx *ctx);
 
-void ml_kem_sha3_256(u8 out[32], const u8 *in, size_t inlen);
-void ml_kem_sha3_512(u8 out[64], const u8 *in, size_t inlen);
+static void sha3_absorb(struct sha3_ctx *ctx);
+static void sha3_finalize(struct sha3_ctx *ctx);
+static void sha3_squeeze(struct sha3_ctx *ctx, u8 outlen);
 
-STATIC inline u64 ml_kem_sha3_load64_le(const u8 *src)
+int sha3_ctx_get_mem(struct sha3_ctx *ctx, u64 *state, size_t size_mem)
 {
-	return ((u64)src[0]      ) |
-	       ((u64)src[1] <<  8) |
-	       ((u64)src[2] << 16) |
-	       ((u64)src[3] << 24) |
-	       ((u64)src[4] << 32) |
-	       ((u64)src[5] << 40) |
-	       ((u64)src[6] << 48) |
-	       ((u64)src[7] << 56);
+	if(!ctx || !state || size_mem != 25) { return -1; }
+	ctx->state = state;
+    ctx->rate = 0;
+    ctx->pos = 0;
+    ctx->in = NULL;
+    ctx->inlen = 0;
+    ctx->out = NULL;
+	return 0;
 }
 
-STATIC inline void ml_kem_sha3_store64_le(u8 *dst, u64 x)
+void sha3_ctx_init(struct sha3_ctx *ctx, const u8 *in, size_t inlen, u8 *out)
 {
-	dst[0] = (u8)(x);
-	dst[1] = (u8)(x >>  8);
-	dst[2] = (u8)(x >> 16);
-	dst[3] = (u8)(x >> 24);
-	dst[4] = (u8)(x >> 32);
-	dst[5] = (u8)(x >> 40);
-	dst[6] = (u8)(x >> 48);
-	dst[7] = (u8)(x >> 56);
+	// 25 lanes x 8 bytes
+    volatile u8 *p = (volatile u8 *)ctx->state;
+    size_t len = 200;
+    while (len--) { *p++ = 0; }
+    
+    ctx->rate = 0;
+    ctx->pos = 0;
+	
+    ctx->in = in;
+    ctx->inlen = inlen;
+    ctx->out = out;
 }
 
-STATIC void ml_kem_sha3_init(struct ml_kem_sha3_ctx *ctx, size_t rate)
+void sha3_256(struct sha3_ctx *ctx)
 {
-	ml_kem_memzero(ctx, sizeof(*ctx));
-	ctx->rate = rate;
+    ctx->rate = 136;
+    ctx->pos = 0;
+
+    sha3_absorb(ctx);
+    sha3_finalize(ctx);
+    sha3_squeeze(ctx, 32);
 }
 
-STATIC void ml_kem_sha3_absorb(struct ml_kem_sha3_ctx *ctx, const u8 *in, size_t inlen)
+void sha3_512(struct sha3_ctx *ctx)
 {
-	size_t i;
-	const size_t rate = ctx->rate;
+    ctx->rate = 72;
+    ctx->pos = 0;
 
-	/* Full rate blocks. Rare for current ML-KEM SHA3 calls, but correct. */
-	while (inlen >= rate) {
-		for (i = 0; i < rate / 8; i++)
-			ctx->st[i] ^= ml_kem_sha3_load64_le(in + 8 * i);
-
-		keccak_f1600_ct(ctx->st);
-		in += rate;
-		inlen -= rate;
-	}
-
-	/* Remaining partial block. First consume full lanes. */
-	for (i = 0; i < inlen / 8; i++)
-		ctx->st[i] ^= ml_kem_sha3_load64_le(in + 8 * i);
-
-	ctx->pos = 8 * i;
-	in += ctx->pos;
-	inlen -= ctx->pos;
-
-	/* Tail: at most 7 bytes. */
-	for (i = 0; i < inlen; i++) {
-		const size_t pos = ctx->pos;
-
-		ctx->st[pos >> 3] ^= (u64)in[i] << (8 * (pos & 7U));
-		ctx->pos = pos + 1;
-	}
+    sha3_absorb(ctx);
+    sha3_finalize(ctx);
+    sha3_squeeze(ctx, 64);
 }
 
-// Apply SHA3 domain separation (0x06) and final padding
-STATIC void ml_kem_sha3_finalize(struct ml_kem_sha3_ctx *ctx, u8 delim)
+// Absorb input into the rate portion of the Keccak state
+static void sha3_absorb(struct sha3_ctx *ctx)
 {
-	const size_t pos = ctx->pos;
+    u8 *s = (u8 *)ctx->state;
 
-	ctx->st[pos >> 3] ^= (u64)delim << (8 * (pos & 7U));
-	ctx->st[(ctx->rate - 1) >> 3] ^= (u64)0x80 << (8 * ((ctx->rate - 1) & 7U));
+    while (ctx->inlen > 0)
+    {
+        size_t n = ctx->rate - ctx->pos;
 
-	keccak_f1600_ct(ctx->st);
-	ctx->pos = 0;
+        if (n > ctx->inlen) { n = ctx->inlen; }
+
+        for (size_t i = 0; i < n; i++) { s[ctx->pos + i] ^= ctx->in[i]; }
+
+        ctx->pos += n;
+        ctx->in += n;
+        ctx->inlen -= n;
+
+        // Permute after absorbing a complete rate block
+        if (ctx->pos == ctx->rate)
+        {
+            keccak_f1600(ctx->state);
+            ctx->pos = 0;
+        }
+    }
 }
 
-STATIC void ml_kem_sha3_squeeze(struct ml_kem_sha3_ctx *ctx, u8 *out, size_t outlen)
+// Apply sha3 domain separation and pad10*1 padding
+static void sha3_finalize(struct sha3_ctx *ctx)
 {
-	while (outlen > 0) {
-		if (ctx->pos == ctx->rate) {
-			keccak_f1600_ct(ctx->st);
-			ctx->pos = 0;
-		}
+    u8 *s = (u8 *)ctx->state;
 
-		if ((ctx->pos & 7U) == 0 && outlen >= 8 && ctx->pos + 8 <= ctx->rate) {
-			ml_kem_sha3_store64_le(out, ctx->st[ctx->pos >> 3]);
-			ctx->pos += 8;
-			out += 8;
-			outlen -= 8;
-			continue;
-		}
+    s[ctx->pos] ^= 0x06;     // SHA3 domain separator
+    s[ctx->rate - 1] ^= 0x80;// Final padding bit
 
-		*out++ = (u8)(ctx->st[ctx->pos >> 3] >> (8 * (ctx->pos & 7U)));
-		ctx->pos++;
-		outlen--;
-	}
+    keccak_f1600(ctx->state);
 }
 
-// SHA3-256: rate = 136 bytes, output = 32 bytes
-void ml_kem_sha3_256(u8 out[32], const u8 *in, size_t inlen)
+// Extract output from the rate portion, permuting as needed
+static void sha3_squeeze(struct sha3_ctx *ctx, uint8_t outlen)
 {
-	struct ml_kem_sha3_ctx ctx;
+    const u8 *s = (const u8 *)ctx->state;
 
-	ml_kem_sha3_init(&ctx, 136);
-	ml_kem_sha3_absorb(&ctx, in, inlen);
-	ml_kem_sha3_finalize(&ctx, 0x06);
-	ml_kem_sha3_squeeze(&ctx, out, 32);
-
-	ml_kem_memzero(&ctx, sizeof(ctx));
-}
-
-// SHA3-512: rate = 72 bytes, output = 64 bytes
-void ml_kem_sha3_512(u8 out[64], const u8 *in, size_t inlen)
-{
-	struct ml_kem_sha3_ctx ctx;
-
-	ml_kem_sha3_init(&ctx, 72);
-	ml_kem_sha3_absorb(&ctx, in, inlen);
-	ml_kem_sha3_finalize(&ctx, 0x06);
-	ml_kem_sha3_squeeze(&ctx, out, 64);
-
-	ml_kem_memzero(&ctx, sizeof(ctx));
+    for (size_t i = 0; i < outlen; i++)
+    {
+        ctx->out[i] = s[i];
+    }
 }
 
 

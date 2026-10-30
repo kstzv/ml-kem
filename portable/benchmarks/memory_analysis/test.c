@@ -38,7 +38,7 @@ int main()
 	total_persistent_memory += RES_PUBL_PART_LVL_512;               // message pk
 	
 	// Count head pool
-	total_persistent_memory += sizeof(struct ml_kem_pool_decaps_ctx);
+	total_persistent_memory += sizeof(struct ml_kem_general_keys_decaps_ctx);
 	printf("\tOnly for persistent memory in ML-KEM-512 level sequrity: %zu bytes(%zu kB and %zu bytes)\n", total_persistent_memory, total_persistent_memory/KB, total_persistent_memory%KB);
 	
 	// Count temp struct
@@ -47,6 +47,7 @@ int main()
 	total_temp_memory += sizeof(u16) * ML_KEM_N * ML_KEM_512; // secret s
 	total_temp_memory += sizeof(u16) * ML_KEM_N * ML_KEM_512; // unpack pk
 	total_temp_memory += ML_KEM_MATRIX_XOF_BYTES;             // massive for rae bytes from SHA3/SHAKE
+	total_temp_memory += ML_KEM_KECCAK_STATE_BYTES;           // bytes for keccak1600
 	printf("\tOnly for temporary memory in ML-KEM-512 level sequrity: %zu bytes(%zu kB and %zu bytes)\n", total_temp_memory, total_temp_memory/KB, total_temp_memory%KB);
 	
 	// Counter slot struct
@@ -67,6 +68,7 @@ int main()
 	total_per_slot_memory += RES_PUBL_PART_LVL_512;               // pk in message
 	total_per_slot_memory += LEN_CIPHERTEXT_512;                  // ciphertext in message
 	total_per_slot_memory += ML_KEM_MATRIX_XOF_BYTES;             // massive for rae bytes from SHA3/SHAKE
+	total_per_slot_memory += ML_KEM_KECCAK_STATE_BYTES;           // bytes for keccak1600
 	printf("\tOnly for one slot in per-slot memory in ML-KEM-512 level sequrity: %zu bytes(%zu kB and %zu bytes)\n", total_per_slot_memory, total_per_slot_memory/KB, total_per_slot_memory%KB);
 	
 	printf("\n\t\tAll memory for 1 slot: %zu(%zu kB and %zu bytes)\n", total_persistent_memory + total_per_slot_memory, (total_persistent_memory + total_per_slot_memory)/KB,
@@ -85,6 +87,7 @@ int main()
 		(total_persistent_memory + total_per_slot_memory * 64)%KB);
 	printf("\n\t\tAll memory for 128 slots: %zu(%zu kB and %zu bytes)\n", total_persistent_memory + total_per_slot_memory * 128, (total_persistent_memory + total_per_slot_memory * 128)/KB,
 		(total_persistent_memory + total_per_slot_memory * 128)%KB);
+	printf("\n\tNote: With a fully expanded matrix, %zu kB and %zu bytes are added to the pool, regardless of the number of slots\n", (size_t)1, (size_t)536);
 
 	
 	printf("\n\n=+=++=+++=++++=+++++=++++++=+++++++=+++++++++=+++++++++=+++++++++++=+++++++++++=++++++++++++=+++++++++++++=++++++++++++++\n\n");
@@ -102,7 +105,7 @@ int main()
 	total_persistent_memory += RES_PUBL_PART_LVL_768;               // message pk
 	
 	// Count head pool
-	total_persistent_memory += sizeof(struct ml_kem_pool_decaps_ctx);
+	total_persistent_memory += sizeof(struct ml_kem_general_keys_decaps_ctx);
 	printf("\tOnly for persistent memory in ML-KEM-768 level sequrity: %zu bytes(%zu kB and %zu bytes)\n", total_persistent_memory, total_persistent_memory/KB, total_persistent_memory%KB);
 	
 	// Count temp struct
@@ -111,6 +114,7 @@ int main()
 	total_temp_memory += sizeof(u16) * ML_KEM_N * ML_KEM_768; // secret s
 	total_temp_memory += sizeof(u16) * ML_KEM_N * ML_KEM_768; // unpack pk
 	total_temp_memory += ML_KEM_MATRIX_XOF_BYTES;             // massive for rae bytes from SHA3/SHAKE
+	total_temp_memory += ML_KEM_KECCAK_STATE_BYTES;           // bytes for keccak1600
 	printf("\tOnly for temporary memory in ML-KEM-512 level sequrity: %zu bytes(%zu kB and %zu bytes)\n", total_temp_memory, total_temp_memory/KB, total_temp_memory%KB);
 	
 	// Counter slot struct
@@ -131,6 +135,7 @@ int main()
 	total_per_slot_memory += RES_PUBL_PART_LVL_768;               // pk in message
 	total_per_slot_memory += LEN_CIPHERTEXT_768;                  // ciphertext in message
 	total_per_slot_memory += ML_KEM_MATRIX_XOF_BYTES;             // massive for rae bytes from SHA3/SHAKE
+	total_per_slot_memory += ML_KEM_KECCAK_STATE_BYTES;           // bytes for keccak1600
 	printf("\tOnly for one slot in per-slot memory in ML-KEM-768 level sequrity: %zu bytes(%zu kB and %zu bytes)\n", total_per_slot_memory, total_per_slot_memory/KB, total_per_slot_memory%KB);
 	
 	printf("\n\t\tAll memory for 1 slot: %zu(%zu kB and %zu bytes)\n", total_persistent_memory + total_per_slot_memory, (total_persistent_memory + total_per_slot_memory)/KB,
@@ -149,6 +154,7 @@ int main()
 		(total_persistent_memory + total_per_slot_memory * 64)%KB);
 	printf("\n\t\tAll memory for 128 slots: %zu(%zu kB and %zu bytes)\n", total_persistent_memory + total_per_slot_memory * 128, (total_persistent_memory + total_per_slot_memory * 128)/KB,
 		(total_persistent_memory + total_per_slot_memory * 128)%KB);
+	printf("\n\tNote: With a fully expanded matrix, %zu kB and %zu bytes are added to the pool, regardless of the number of slots\n", (size_t)3, (size_t)375);
 		
 		
 	printf("\n\n=-=--=---=----=-----=------=-------=--------=---------=----------=-----------=-------------=-------------=--------------=---------------\n\n");
@@ -166,15 +172,16 @@ int main()
 	total_persistent_memory += RES_PUBL_PART_LVL_1024;               // message pk
 	
 	// Count head pool
-	total_persistent_memory += sizeof(struct ml_kem_pool_decaps_ctx);
+	total_persistent_memory += sizeof(struct ml_kem_general_keys_decaps_ctx);
 	printf("\tOnly for persistent memory in ML-KEM-1024 level sequrity: %zu bytes(%zu kB and %zu bytes)\n", total_persistent_memory, total_persistent_memory/KB, total_persistent_memory%KB);
 	
 	// Count temp struct
 	total_temp_memory += sizeof(struct ml_kem_temp);          
-	total_temp_memory += sizeof(u16) * ML_KEM_N;              // poly
+	total_temp_memory += sizeof(u16) * ML_KEM_N;               // poly
 	total_temp_memory += sizeof(u16) * ML_KEM_N * ML_KEM_1024; // secret s
 	total_temp_memory += sizeof(u16) * ML_KEM_N * ML_KEM_1024; // unpack pk
-	total_temp_memory += ML_KEM_MATRIX_XOF_BYTES;             // massive for rae bytes from SHA3/SHAKE
+	total_temp_memory += ML_KEM_MATRIX_XOF_BYTES;              // massive for rae bytes from SHA3/SHAKE
+	total_temp_memory += ML_KEM_KECCAK_STATE_BYTES;            // bytes for keccak1600
 	printf("\tOnly for temporary memory in ML-KEM-1024 level sequrity: %zu bytes(%zu kB and %zu bytes)\n", total_temp_memory, total_temp_memory/KB, total_temp_memory%KB);
 	
 	// Counter slot struct
@@ -195,6 +202,7 @@ int main()
 	total_per_slot_memory += RES_PUBL_PART_LVL_1024;               // pk in message
 	total_per_slot_memory += LEN_CIPHERTEXT_1024;                  // ciphertext in message
 	total_per_slot_memory += ML_KEM_MATRIX_XOF_BYTES;              // massive for rae bytes from SHA3/SHAKE
+	total_per_slot_memory += ML_KEM_KECCAK_STATE_BYTES;           // bytes for keccak1600
 	printf("\tOnly for one slot in per-slot memory in ML-KEM-1024 level sequrity: %zu bytes(%zu kB and %zu bytes)\n", total_per_slot_memory, total_per_slot_memory/KB, total_per_slot_memory%KB);
 	
 	printf("\n\t\tAll memory for 1 slot: %zu(%zu kB and %zu bytes)\n", total_persistent_memory + total_per_slot_memory, (total_persistent_memory + total_per_slot_memory)/KB,
@@ -213,6 +221,7 @@ int main()
 		(total_persistent_memory + total_per_slot_memory * 64)%KB);
 	printf("\n\t\tAll memory for 128 slots: %zu(%zu kB and %zu bytes)\n", total_persistent_memory + total_per_slot_memory * 128, (total_persistent_memory + total_per_slot_memory * 128)/KB,
 		(total_persistent_memory + total_per_slot_memory * 128)%KB);
+	printf("\n\tNote: With a fully expanded matrix, %zu kB are added to the pool, regardless of the number of slots\n", (size_t)6);
 	
 	
 	printf("\n\n=`=``=```=````=`````=``````=```````=````````=`````````=``````````=```````````=````````````=`````````````=``````````````=```````````````\n\n");

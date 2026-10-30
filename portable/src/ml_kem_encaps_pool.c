@@ -198,9 +198,9 @@ int ml_kem_assign_encaps_pool_u8_buffers(struct ml_kem_pool_encaps_ctx *ctx, enu
 	
 	// Allocate and zero-initialize the byte storage for all slots
 	u8 *work_mem_two_bytes;
-	work_mem_two_bytes = ml_kem_alloc((size_pk + size_ct + (size_t)ML_KEM_MATRIX_XOF_BYTES) * number_slots);
+	work_mem_two_bytes = ml_kem_alloc((size_pk + size_ct + (size_t)(ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES)) * number_slots);
 	if(!work_mem_two_bytes) { return 1; }
-	ml_kem_memzero(work_mem_two_bytes, (size_pk + size_ct + (size_t)ML_KEM_MATRIX_XOF_BYTES) * number_slots);
+	ml_kem_memzero(work_mem_two_bytes, (size_pk + size_ct + (size_t)(ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES)) * number_slots);
 	// Preserve the allocation base in the pool for later cleanup
 	if(k == ML_KEM_512) { ctx->all_u8_mem_512 = work_mem_two_bytes; }
 	else if(k == ML_KEM_768) { ctx->all_u8_mem_768 = work_mem_two_bytes; }
@@ -220,6 +220,9 @@ int ml_kem_assign_encaps_pool_u8_buffers(struct ml_kem_pool_encaps_ctx *ctx, enu
 		// Temporary SHAKE/XOF output buffer used during polynomial generation
 		first_slot[i].encaps_ctx->raw_bytes = work_mem_two_bytes;
 		work_mem_two_bytes += ML_KEM_MATRIX_XOF_BYTES;
+		shake_ctx_get_mem(&first_slot[i].encaps_ctx->shake, (u64 *)work_mem_two_bytes, ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
+		sha3_ctx_get_mem(&first_slot[i].encaps_ctx->sha3, (u64 *)work_mem_two_bytes, ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
+		work_mem_two_bytes += ML_KEM_KECCAK_STATE_BYTES;
 	}
 	
 	return 0;

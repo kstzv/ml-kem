@@ -4,11 +4,12 @@ CFLAGS = -O3 -std=c11 -Wall -Wextra \
 		 -DUSERSPACE \
          -I../../src \
          -pthread \
-         -I../../ports/userspace 
+         -I../../ports/userspace \
+         -DFULL_MATRIX=0
 
 SRC_CORE = \
 	../../ports/userspace/ml_kem_userspace_port.c \
-    ../../src/keccak1600.c \
+    ../../src/keccak_1600.c \
     ../../src/ml_kem.c \
     ../../src/ml_kem_create_keys.c \
     ../../src/ml_kem_decrypt.c \

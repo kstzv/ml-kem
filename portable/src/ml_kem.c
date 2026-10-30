@@ -147,7 +147,11 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object_from_imported_sk(u8 
 	
 	// Check hash in sk messege
 	u8 computed_hash[ML_KEM_SEED_BYTES];
-	ml_kem_sha3_256(computed_hash, ctx_keys->public_key_msg, size_pk);
+	u8 mem_keccak[ML_KEM_KECCAK_STATE_BYTES];
+	struct sha3_ctx sha_ctx;
+	sha3_ctx_get_mem(&sha_ctx, (u64 *)mem_keccak, ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
+	sha3_ctx_init(&sha_ctx, ctx_keys->public_key_msg, size_pk, computed_hash);
+	sha3_256(&sha_ctx);
 	if(memcmp(computed_hash, ctx_keys->h_pk, ML_KEM_SEED_BYTES) != 0)
 	{
 		ml_kem_memzero(computed_hash, sizeof(computed_hash));
@@ -155,6 +159,7 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object_from_imported_sk(u8 
 		return err_create_object_from_imported_sk(-ML_KEM_EINVAL);
 	}
 	ml_kem_memzero(computed_hash, ML_KEM_SEED_BYTES);
+	ml_kem_memzero(mem_keccak, ML_KEM_KECCAK_STATE_BYTES);
 	
 	// Check coefficients in pk
 	if(ml_kem_validate_pk(ctx_keys->public_key_msg, ctx_keys->public_key_msg_len) == 0)
@@ -567,7 +572,7 @@ void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx)
 	// Wipe and free the public key, ciphertext, and XOF byte buffers
 	if(ctx->all_u8_mem_512) 
 	{ 
-		ml_kem_memzero(ctx->all_u8_mem_512, (RES_PUBL_PART_LVL_512 + LEN_CIPHERTEXT_512 + ML_KEM_MATRIX_XOF_BYTES) * ctx->ml_kem_pool_count_512);
+		ml_kem_memzero(ctx->all_u8_mem_512, (RES_PUBL_PART_LVL_512 + LEN_CIPHERTEXT_512 + ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES) * ctx->ml_kem_pool_count_512);
 		ml_kem_free(ctx->all_u8_mem_512); 
 	}
 	
@@ -592,7 +597,7 @@ void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx)
 	// Wipe and free the public key, ciphertext, and XOF byte buffers
 	if(ctx->all_u8_mem_768) 
 	{ 
-		ml_kem_memzero(ctx->all_u8_mem_768, (RES_PUBL_PART_LVL_768 + LEN_CIPHERTEXT_768 + ML_KEM_MATRIX_XOF_BYTES) * ctx->ml_kem_pool_count_768);
+		ml_kem_memzero(ctx->all_u8_mem_768, (RES_PUBL_PART_LVL_768 + LEN_CIPHERTEXT_768 + ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES) * ctx->ml_kem_pool_count_768);
 		ml_kem_free(ctx->all_u8_mem_768);
 	}
 	
@@ -617,7 +622,7 @@ void ml_kem_encaps_pool_destroy(struct ml_kem_pool_encaps_ctx *ctx)
 	// Wipe and free the public key, ciphertext, and XOF byte buffers
 	if(ctx->all_u8_mem_1024) 
 	{ 
-		ml_kem_memzero(ctx->all_u8_mem_1024, (RES_PUBL_PART_LVL_1024 + LEN_CIPHERTEXT_1024 + ML_KEM_MATRIX_XOF_BYTES) * ctx->ml_kem_pool_count_1024);
+		ml_kem_memzero(ctx->all_u8_mem_1024, (RES_PUBL_PART_LVL_1024 + LEN_CIPHERTEXT_1024 + ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES) * ctx->ml_kem_pool_count_1024);
 		ml_kem_free(ctx->all_u8_mem_1024); 
 	}
 	
@@ -631,9 +636,14 @@ STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *ct
 	// Step 3: Precompute fallback shared secret (z || c) → SHAKE256
 	// Used if ciphertext verification fails (CCA security requirement)
 	u8 hash_z[ML_KEM_SEED_BYTES];
-	memcpy(ctx->ml_kem_pool[curr_slot].kdf_buf, ctx->ml_kem_pool[curr_slot].decrypt_ctx->ctx->z, ML_KEM_SEED_BYTES);
-	memcpy(ctx->ml_kem_pool[curr_slot].kdf_buf + ML_KEM_SEED_BYTES, ciphertext, len_ciphertext);
-	ml_kem_shake256(hash_z, ML_KEM_SEED_BYTES, ctx->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
+	memcpy(ctx->ml_kem_pool[curr_slot].buff_for_rate, ctx->ml_kem_pool[curr_slot].decrypt_ctx->ctx->z, ML_KEM_SEED_BYTES);
+	memcpy(ctx->ml_kem_pool[curr_slot].buff_for_rate + ML_KEM_SEED_BYTES, ciphertext, 136 - ML_KEM_SEED_BYTES);
+	shake_ctx_zero(&ctx->ml_kem_pool[curr_slot].encaps_ctx->shake);
+	shake_ctx_init(&ctx->ml_kem_pool[curr_slot].encaps_ctx->shake, ctx->ml_kem_pool[curr_slot].buff_for_rate, 136, hash_z, ML_KEM_SEED_BYTES);
+	ctx->ml_kem_pool[curr_slot].encaps_ctx->shake.rate = 136;
+	shake_absorb(&ctx->ml_kem_pool[curr_slot].encaps_ctx->shake);
+	shake_ctx_init(&ctx->ml_kem_pool[curr_slot].encaps_ctx->shake, ciphertext + (136 - ML_KEM_SEED_BYTES), len_ciphertext - (136 - ML_KEM_SEED_BYTES), hash_z, ML_KEM_SEED_BYTES);
+	shake256(&ctx->ml_kem_pool[curr_slot].encaps_ctx->shake);
 	
 	// Step 4: Constant-time ciphertext comparison
 	u32 value = 0;
@@ -666,7 +676,7 @@ STATIC void ml_kem_decaps_ct_select_ss(struct ml_kem_general_keys_decaps_ctx *ct
 	
 	// Step 6: Wipe local buffers
 	ml_kem_memzero(hash_z, ML_KEM_SEED_BYTES);
-	ml_kem_memzero(ctx->ml_kem_pool[curr_slot].kdf_buf, ML_KEM_SEED_BYTES + len_ciphertext);
+	ml_kem_memzero(ctx->ml_kem_pool[curr_slot].buff_for_rate, 136);
 }
 
 // Function for packing a secret vector

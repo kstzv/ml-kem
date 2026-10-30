@@ -21,9 +21,9 @@ void ml_kem_memzero(void *ptr, size_t len);
 // Internal (static) helpers
 STATIC int ml_kem_generation_entropy(struct ml_kem_temp *temp,  ml_kem_entropy_fn entropy);
 STATIC void ml_kem_create_vector_poly(struct ml_kem_temp *temp);
-STATIC int ml_kem_create_public_key(struct ml_kem_temp *temp);
+STATIC void ml_kem_create_public_key(struct ml_kem_temp *temp);
 STATIC void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx);
-STATIC int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx,  ml_kem_entropy_fn entropy);
+STATIC int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx, struct ml_kem_temp *temp, ml_kem_entropy_fn entropy);
 
 
 // Main key generation routine.
@@ -65,14 +65,13 @@ int ml_kem_create_ctx_struct(struct ml_kem_temp *temp, struct ml_kem_ctx *ctx, m
 	ml_kem_create_vector_poly(temp);
 	
 	// Step 3: Generate public key vector t = A * s + e
-	ret = ml_kem_create_public_key(temp);
-	if(ret != 0) { return ret;}
+	ml_kem_create_public_key(temp);
 	
 	// Step 4: Serialize public key and copy required data into persistent context
 	ml_kem_convert_to_bytes_format_and_copy(temp, ctx);
 	
 	// Step 5: Finalize context (generate z and H(pk))
-	ret = ml_kem_finally_create_z_and_h_pk(ctx, entropy);
+	ret = ml_kem_finally_create_z_and_h_pk(ctx, temp, entropy);
 	if(ret != 0) { return ret;}
 	
 	return 0;
@@ -125,9 +124,11 @@ struct ml_kem_temp *ml_kem_temp_alloc(enum ml_kem_k level)
 	temp->secret = temp->public_key + temp->k * ML_KEM_N;
 	
 	// Allocate buffer for raw XOF output (used for matrix/vector generation)
-	temp->raw_bytes = ml_kem_alloc(ML_KEM_MATRIX_XOF_BYTES);
+	temp->raw_bytes = ml_kem_alloc(ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES);
 	if(!temp->raw_bytes) { goto second_error_exit; }
-	ml_kem_memzero(temp->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
+	ml_kem_memzero(temp->raw_bytes, ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES);
+	sha3_ctx_get_mem(&temp->sha3, (u64 *)(temp->raw_bytes + ML_KEM_MATRIX_XOF_BYTES), ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
+	shake_ctx_get_mem(&temp->shake, (u64 *)(temp->raw_bytes + ML_KEM_MATRIX_XOF_BYTES), ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
 	
 	return temp;
 	
@@ -198,7 +199,7 @@ void ml_kem_destroy_temp_struct(struct ml_kem_temp *temp)
 	// Wipe and free raw XOF buffer (used for matrix/vector generation)
 	if(temp->raw_bytes)
 	{
-		ml_kem_memzero(temp->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
+		ml_kem_memzero(temp->raw_bytes, ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES);
 		ml_kem_free(temp->raw_bytes);
 		temp->raw_bytes = NULL;
 	}
@@ -289,7 +290,8 @@ STATIC int ml_kem_generation_entropy(struct ml_kem_temp *temp, ml_kem_entropy_fn
 	// Expand input seed into:
 	//   - seed_rho   : public matrix A seed
 	//   - seed_sigma : secret/noise generation seed
-	ml_kem_sha3_512(seeds_rho_and_sigma, first_seed, ML_KEM_SEED_BYTES + 1);
+	sha3_ctx_init(&temp->sha3, first_seed, ML_KEM_SEED_BYTES + 1, seeds_rho_and_sigma);
+	sha3_512(&temp->sha3);
 	ml_kem_memzero(first_seed, sizeof(first_seed));
 	
 	// Store derived seeds in temporary context
@@ -321,7 +323,9 @@ STATIC void ml_kem_create_vector_poly(struct ml_kem_temp *temp)
 		local_seed[32] = (u8)i;
 		
 		// Expand per-polynomial input into raw pseudorandom bytes
-		ml_kem_shake256(temp->raw_bytes, temp->number_raw_bytes_vectors, local_seed, ML_KEM_SEED_BYTES + 1);
+		shake_ctx_zero(&temp->shake);
+		shake_ctx_init(&temp->shake, local_seed, ML_KEM_SEED_BYTES + 1, temp->raw_bytes, temp->number_raw_bytes_vectors);
+		shake256(&temp->shake);
 		
 		// Sample one polynomial from CBD stream
 		ml_kem_gen_polynomial_for_cbd(temp->secret + i * ML_KEM_N, temp->raw_bytes, temp->eta);
@@ -338,7 +342,7 @@ STATIC void ml_kem_create_vector_poly(struct ml_kem_temp *temp)
 }
 
 // Generate public key vector t = A * s + e (in NTT domain)
-STATIC int ml_kem_create_public_key(struct ml_kem_temp *temp)
+STATIC void ml_kem_create_public_key(struct ml_kem_temp *temp)
 {
 	// Local seed for matrix A generation: seed_rho || col || row
 	u8 local_seed_matrix[ML_KEM_SEED_BYTES + 2];
@@ -364,19 +368,15 @@ STATIC int ml_kem_create_public_key(struct ml_kem_temp *temp)
 			local_seed_matrix[32] = (u8)col;
 			local_seed_matrix[33] = (u8)row;
 			
-			// Expand seed into raw bytes for matrix polynomial A[row][col]
-			ml_kem_shake128(temp->raw_bytes, ML_KEM_MATRIX_XOF_BYTES, local_seed_matrix, ML_KEM_SEED_BYTES + 2);
-			
 			// Sample polynomial via rejection sampling
-			int ret = ml_kem_gen_polynomial_for_matrix(temp->poly, temp->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
-			if(ret < 0) 
-			{ 
-				ml_kem_memzero(temp->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
-                ml_kem_memzero(local_seed_noise, sizeof(local_seed_noise));
-                ml_kem_memzero(local_seed_matrix, sizeof(local_seed_matrix));
-                ml_kem_memzero(temp->poly, sizeof(u16) * ML_KEM_N);
-				return -ML_KEM_EAGAIN;
-			}
+			shake_ctx_zero(&temp->shake);
+			shake_ctx_init(&temp->shake, local_seed_matrix, ML_KEM_SEED_BYTES + 2, temp->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
+			int poly_counter = 0;
+			do{
+				shake128(&temp->shake);
+				poly_counter += ml_kem_gen_polynomial_for_matrix(temp->poly + poly_counter, temp->raw_bytes, ML_KEM_MATRIX_XOF_BYTES, (int)ML_KEM_N - poly_counter);
+				if(poly_counter >= ML_KEM_N) { break; }
+			}while(poly_counter < ML_KEM_N);
 			
 			// Multiply A[row][col] with s[col] (both in NTT domain)
 			ml_kem_multiply(temp->poly, temp->poly, temp->secret + col * ML_KEM_N);
@@ -390,7 +390,9 @@ STATIC int ml_kem_create_public_key(struct ml_kem_temp *temp)
 		
 		// Generate noise polynomial e[row]
 		local_seed_noise[32] = (u8)counter_noise;
-		ml_kem_shake256(temp->raw_bytes, temp->number_raw_bytes_vectors, local_seed_noise, ML_KEM_SEED_BYTES + 1);
+		shake_ctx_zero(&temp->shake);
+		shake_ctx_init(&temp->shake, local_seed_noise, ML_KEM_SEED_BYTES + 1, temp->raw_bytes, temp->number_raw_bytes_vectors);
+		shake256(&temp->shake);
 		
 		// Sample noise via CBD and convert to NTT domain
 		ml_kem_gen_polynomial_for_cbd(temp->poly, temp->raw_bytes, temp->eta);
@@ -408,8 +410,6 @@ STATIC int ml_kem_create_public_key(struct ml_kem_temp *temp)
 	ml_kem_memzero(temp->poly, sizeof(u16) * ML_KEM_N);
 	ml_kem_memzero(local_seed_noise, sizeof(local_seed_noise));
 	ml_kem_memzero(local_seed_matrix, sizeof(local_seed_matrix));
-	
-	return 0;
 }
 
 // Serialize public key vector t into byte representation and copy all required data into ctx.
@@ -467,7 +467,7 @@ STATIC void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, st
 // Generate auxiliary values for decapsulation:
 //   - z    : random fallback secret
 //   - h_pk : hash of serialized public key
-STATIC int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx, ml_kem_entropy_fn entropy)
+STATIC int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx, struct ml_kem_temp *temp, ml_kem_entropy_fn entropy)
 {
 	// Fill z with 32 bytes of system entropy
 	if(entropy == NULL)
@@ -479,7 +479,8 @@ STATIC int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx, ml_kem_entro
 	}
 	
 	// Compute hash of public key (used in KDF during encaps/decaps)
-	ml_kem_sha3_256(ctx->h_pk, ctx->public_key_msg, ctx->public_key_msg_len);
+	sha3_ctx_init(&temp->sha3, ctx->public_key_msg, ctx->public_key_msg_len, ctx->h_pk);
+	sha3_256(&temp->sha3);
 
 	return 0;
 }

@@ -14,11 +14,14 @@ void ml_kem_unpack_pk_t_u16(struct ml_kem_encaps_ctx *ctx);
 
 // Internal (file-local) helper functions
 STATIC void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed);
-STATIC int  ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed);
+STATIC void  ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed);
 STATIC void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed);
 STATIC void ml_kem_compress_ciphertext(struct ml_kem_encaps_ctx *ctx);
 STATIC inline u16 ml_kem_compress(u16 x, u8 d);
 STATIC void ml_kem_compress_and_pack(u8 *out, const u16 *coeffs, size_t n, u8 d);
+#if FULL_MATRIX
+STATIC void ml_kem_create_u_full_matrix(struct ml_kem_encaps_ctx *ctx, u8 *seed);
+#endif
 
 // Allocate and initialize encapsulation context.
 // This function prepares all buffers required for ML-KEM encapsulation,
@@ -83,15 +86,22 @@ struct ml_kem_encaps_ctx *ml_kem_alloc_encaps(u8 *public_key_msg, enum ml_kem_k 
 
 	 // Allocate buffer for serialized public key + extra space
 	 // For XOF-generated raw bytes (used during matrix expansion)
-	ctx->public_key_msg = ml_kem_alloc(ctx->public_key_msg_len + ML_KEM_MATRIX_XOF_BYTES);
+	ctx->public_key_msg = ml_kem_alloc(ctx->public_key_msg_len + ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES);
 	if (!ctx->public_key_msg) { goto third_error_exit; }
-	ml_kem_memzero(ctx->public_key_msg, ctx->public_key_msg_len + ML_KEM_MATRIX_XOF_BYTES);
+	ml_kem_memzero(ctx->public_key_msg, ctx->public_key_msg_len + ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES);
 
 	// Assign raw_bytes buffer
 	ctx->raw_bytes = ctx->public_key_msg + ctx->public_key_msg_len;
 	
+	u64 *state = (u64 *)(ctx->raw_bytes + ML_KEM_MATRIX_XOF_BYTES);
+	sha3_ctx_get_mem(&ctx->sha3, state, ML_KEM_KECCAK_STATE_BYTES / sizeof(u64));
+	shake_ctx_get_mem(&ctx->shake, state, ML_KEM_KECCAK_STATE_BYTES / sizeof(u64));
+	
 	// default - no error
 	ctx->err = 0;
+	#if FULL_MATRIX
+	ctx->full_matrix = NULL;
+	#endif
 
 	// Copy provided public key if present
 	if (public_key_msg != NULL)
@@ -124,7 +134,7 @@ void ml_kem_wipe_encaps(struct ml_kem_encaps_ctx *ctx)
 	// Note: public_key_msg itself is not wiped here as it is non-secret
 	if(ctx->raw_bytes)
 	{
-		ml_kem_memzero(ctx->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
+		ml_kem_memzero(ctx->raw_bytes, ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES);
 	}
 	
 	// Zeroize main polynomial buffer containing:
@@ -228,11 +238,13 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
 		#endif
 
 		// Compute H(pk)
-		ml_kem_sha3_256(first_seed_encaps + ML_KEM_SEED_BYTES, ctx->public_key_msg, ctx->public_key_msg_len);
+		sha3_ctx_init(&ctx->sha3, ctx->public_key_msg, ctx->public_key_msg_len, first_seed_encaps + ML_KEM_SEED_BYTES);
+		sha3_256(&ctx->sha3);
 	}
 		
 	// Derive (K_bar || r) = SHA3-512(m || H(pk))
-    ml_kem_sha3_512(result_seeds, first_seed_encaps, ML_KEM_SEED_BYTES * 2);
+    sha3_ctx_init(&ctx->sha3, first_seed_encaps, ML_KEM_SEED_BYTES * 2, result_seeds);
+	sha3_512(&ctx->sha3);
 
     // Clear intermediate buffer
     ml_kem_memzero(first_seed_encaps, sizeof(first_seed_encaps));
@@ -251,7 +263,14 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
     ml_kem_create_temp_secret_y(ctx, r);
     
     // Compute u = A * y + e1
-    ml_kem_create_u(ctx, r);
+    if(msg && hash_pk)
+    {
+		#if FULL_MATRIX
+		ml_kem_create_u_full_matrix(ctx, r);
+		#else
+		ml_kem_create_u(ctx, r);
+		#endif
+	}else { ml_kem_create_u(ctx, r); }
     
     // Compute v = t * y + e2 + m
     ml_kem_create_v(ctx, r);
@@ -329,7 +348,9 @@ STATIC void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 		inside_seed[32] = i;
 
 		// Expand seed using SHAKE256 to obtain raw bytes
-		ml_kem_shake256(ctx->raw_bytes, number_bytes, inside_seed, ML_KEM_SEED_BYTES + 1);
+		shake_ctx_zero(&ctx->shake);
+		shake_ctx_init(&ctx->shake, inside_seed, ML_KEM_SEED_BYTES + 1, ctx->raw_bytes, number_bytes);
+		shake256(&ctx->shake);
 
 		// Convert raw bytes into polynomial using CBD
 		ml_kem_gen_polynomial_for_cbd(ctx->y + i * ML_KEM_N, ctx->raw_bytes, eta);
@@ -341,10 +362,61 @@ STATIC void ml_kem_create_temp_secret_y(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 	// Clear seed in this func
 	ml_kem_memzero(inside_seed, ML_KEM_SEED_BYTES + 1);
 }
+
+#if FULL_MATRIX
+STATIC void ml_kem_create_u_full_matrix(struct ml_kem_encaps_ctx *ctx, u8 *seed)
+{
+	// Noise counter (starts after secret vector y indices)
+	u8 counter_noise = ctx->k;
+	
+	// Prepare noise seed (r || counter)
+	u8 local_seed_noise[ML_KEM_SEED_BYTES + 1];
+	memcpy(local_seed_noise, seed, ML_KEM_SEED_BYTES);
+	local_seed_noise[32] = 0;
+	
+	for(size_t i = 0; i < ctx->k; i++)
+    {
+		for(size_t j = 0; j < ctx->k; j++)
+		{
+			// Multiply A[i][j] * y[j] (both in NTT domain)
+			ml_kem_multiply(ctx->poly, ctx->full_matrix + (i * ctx->k + j) * ML_KEM_N, ctx->y + j * ML_KEM_N);
+			
+			// Accumulate into u[i]:
+			// u[i] += A[i][j] * y[j]  (row-vector dot product)
+			ml_kem_add(ctx->u + i * ML_KEM_N, ctx->u + i * ML_KEM_N, ctx->poly);
+			
+			// Clear temporary polynomial buffer
+			ml_kem_memzero(ctx->poly, sizeof(u16) * ML_KEM_N);
+		}
+		// Convert accumulated result from NTT domain to coefficient domain
+		ml_kem_intt_fips203(ctx->u + i * ML_KEM_N);
+		
+		// Generate noise polynomial e1[i] from seed
+		local_seed_noise[32] = counter_noise;
+		shake_ctx_zero(&ctx->shake);
+		shake_ctx_init(&ctx->shake, local_seed_noise, ML_KEM_SEED_BYTES + 1, ctx->raw_bytes, ML_KEM_VECTOR_XOF_BYTES_L34);
+		shake256(&ctx->shake);
+		
+		// Sample noise polynomial using CBD (eta = 2 per standard)
+		ml_kem_gen_polynomial_for_cbd(ctx->poly, ctx->raw_bytes, ML_KEM_CBD_ETA_2);
+		
+		// Add noise: u[i] = u[i] + e1[i]
+		ml_kem_add(ctx->u + i * ML_KEM_N, ctx->u + i * ML_KEM_N, ctx->poly);
+		
+		// Clear temporary polynomial and increment noise counter
+		ml_kem_memzero(ctx->poly, sizeof(u16) * ML_KEM_N);
+		counter_noise++;
+	}
+	
+	// Clear all sensitive temporary data and return success
+	ml_kem_memzero(ctx->poly, sizeof(u16) * ML_KEM_N);
+	ml_kem_memzero(local_seed_noise, sizeof(local_seed_noise));
+}
+#endif
 		
 // Compute vector u during encapsulation:
 // u = A * y + e1
-STATIC int ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed)
+STATIC void ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 {
 	// Prepare matrix seed (rho || i || j)
 	u8 local_seed_matrix[ML_KEM_SEED_BYTES + 2];
@@ -370,20 +442,16 @@ STATIC int ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 			// Set domain separation bytes (i, j)
 			local_seed_matrix[32] = (u8)i;
 	        local_seed_matrix[33] = (u8)j;
-	        
-	        // Expand seed using SHAKE128 to obtain raw bytes for matrix polynomial
-			ml_kem_shake128(ctx->raw_bytes, ML_KEM_MATRIX_XOF_BYTES, local_seed_matrix, ML_KEM_SEED_BYTES + 2);
 			
-			// Generate polynomial A[i][j] using rejection sampling
-			// Return error if not enough valid coefficients were produced
-			int ret = ml_kem_gen_polynomial_for_matrix(ctx->poly, ctx->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
-			if(ret < 0) 
-			{
-				 ml_kem_memzero(ctx->poly, sizeof(u16) * ML_KEM_N);
-	             ml_kem_memzero(local_seed_noise, sizeof(local_seed_noise));
-	             ml_kem_memzero(local_seed_matrix, sizeof(local_seed_matrix));
-				 return ret; 
-			}
+			// Expand seed using SHAKE128 to obtain raw bytes for matrix polynomial
+			shake_ctx_zero(&ctx->shake);
+			shake_ctx_init(&ctx->shake, local_seed_matrix, ML_KEM_SEED_BYTES + 2, ctx->raw_bytes, ML_KEM_MATRIX_XOF_BYTES);
+			int poly_counter = 0;
+			do{
+				shake128(&ctx->shake);
+				poly_counter += ml_kem_gen_polynomial_for_matrix(ctx->poly + poly_counter, ctx->raw_bytes, ML_KEM_MATRIX_XOF_BYTES, (int)ML_KEM_N - poly_counter);
+				if(poly_counter >= ML_KEM_N) { break; }
+			}while(poly_counter < ML_KEM_N);
 			
 			// Multiply A[i][j] * y[j] (both in NTT domain)
 			ml_kem_multiply(ctx->poly, ctx->poly, ctx->y + j * ML_KEM_N);
@@ -401,7 +469,9 @@ STATIC int ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 		
 		// Generate noise polynomial e1[i] from seed
 		local_seed_noise[32] = counter_noise;
-		ml_kem_shake256(ctx->raw_bytes, ML_KEM_VECTOR_XOF_BYTES_L34, local_seed_noise, ML_KEM_SEED_BYTES + 1);
+		shake_ctx_zero(&ctx->shake);
+		shake_ctx_init(&ctx->shake, local_seed_noise, ML_KEM_SEED_BYTES + 1, ctx->raw_bytes, ML_KEM_VECTOR_XOF_BYTES_L34);
+		shake256(&ctx->shake);
 		
 		// Sample noise polynomial using CBD (eta = 2 per standard)
 		ml_kem_gen_polynomial_for_cbd(ctx->poly, ctx->raw_bytes, ML_KEM_CBD_ETA_2);
@@ -418,7 +488,6 @@ STATIC int ml_kem_create_u(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 	ml_kem_memzero(ctx->poly, sizeof(u16) * ML_KEM_N);
 	ml_kem_memzero(local_seed_noise, sizeof(local_seed_noise));
 	ml_kem_memzero(local_seed_matrix, sizeof(local_seed_matrix));
-	return 0;
 }
 
 // Compute value v during encapsulation:
@@ -447,7 +516,9 @@ STATIC void ml_kem_create_v(struct ml_kem_encaps_ctx *ctx, u8 *seed)
 	local_seed_noise[32] = ctx->k * 2;
 	
 	// Expand seed using SHAKE256 to obtain raw bytes for noise polynomial e2
-	ml_kem_shake256(ctx->raw_bytes, ML_KEM_VECTOR_XOF_BYTES_L34, local_seed_noise, ML_KEM_SEED_BYTES + 1);
+	shake_ctx_zero(&ctx->shake);
+	shake_ctx_init(&ctx->shake, local_seed_noise, ML_KEM_SEED_BYTES + 1, ctx->raw_bytes, ML_KEM_VECTOR_XOF_BYTES_L34);
+	shake256(&ctx->shake);
 	
 	// Sample noise polynomial e2 using CBD (eta = 2 per standard)
 	ml_kem_gen_polynomial_for_cbd(ctx->poly, ctx->raw_bytes, ML_KEM_CBD_ETA_2);
