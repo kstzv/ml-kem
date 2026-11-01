@@ -30,7 +30,7 @@ void ml_kem_wipe_decrypt(struct ml_kem_decrypt_ctx *ctx_decry)
 	if(ctx_decry->ciphertext) { ml_kem_memzero(ctx_decry->ciphertext, ctx_decry->ciphertext_len); }
 	
 	// Zeroize recovered message seed (m)
-	ml_kem_memzero(ctx_decry->m, 32);
+	ml_kem_memzero(ctx_decry->m, ML_KEM_SEED_BYTES);
 }
 
 // Main decryption routine (part of global decapsulation, paired with encapsulation)
@@ -64,7 +64,7 @@ STATIC void ml_kem_decrypt_get_poly(struct ml_kem_decrypt_ctx *ctx_decry)
 		ml_kem_multiply(ctx_decry->u + i * ML_KEM_N, ctx_decry->u + i * ML_KEM_N, ctx_decry->ctx->secret + i * ML_KEM_N);
 		
 		// Accumulate into result polynomial (inner product of vectors)
-		ml_kem_add(ctx_decry->poly, ctx_decry->poly,ctx_decry->u + i * ML_KEM_N);
+		ml_kem_add(ctx_decry->poly, ctx_decry->poly, ctx_decry->u + i * ML_KEM_N);
 	}
 	
 	// Convert accumulated result back to coefficient domain

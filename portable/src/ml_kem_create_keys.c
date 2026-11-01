@@ -274,13 +274,8 @@ STATIC int ml_kem_generation_entropy(struct ml_kem_temp *temp, ml_kem_entropy_fn
 	
 #else             // Read 32 bytes of system entropy
     
-    if(entropy == NULL)
-    {
-		if(ml_kem_entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_SYSTEM_ENTROPY_FAILED; }
-	}else
-	{
-		if(entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_CALLBACK_ENTROPY_FAILED; }
-	}
+    if(entropy == NULL) { if(ml_kem_entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_SYSTEM_ENTROPY_FAILED; } }
+    else { if(entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_CALLBACK_ENTROPY_FAILED; } }
 
 #endif
 	
@@ -470,13 +465,8 @@ STATIC void ml_kem_convert_to_bytes_format_and_copy(struct ml_kem_temp *temp, st
 STATIC int ml_kem_finally_create_z_and_h_pk(struct ml_kem_ctx *ctx, struct ml_kem_temp *temp, ml_kem_entropy_fn entropy)
 {
 	// Fill z with 32 bytes of system entropy
-	if(entropy == NULL)
-    {
-		if(ml_kem_entropy(ctx->z, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_SYSTEM_ENTROPY_FAILED; }
-	}else
-	{
-		if(entropy(ctx->z, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_CALLBACK_ENTROPY_FAILED; }
-	}
+	if(entropy == NULL) { if(ml_kem_entropy(ctx->z, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_SYSTEM_ENTROPY_FAILED; } }
+	else { if(entropy(ctx->z, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_CALLBACK_ENTROPY_FAILED; } }
 	
 	// Compute hash of public key (used in KDF during encaps/decaps)
 	sha3_ctx_init(&temp->sha3, ctx->public_key_msg, ctx->public_key_msg_len, ctx->h_pk);

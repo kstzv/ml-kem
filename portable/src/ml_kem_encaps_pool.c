@@ -197,32 +197,32 @@ int ml_kem_assign_encaps_pool_u8_buffers(struct ml_kem_pool_encaps_ctx *ctx, enu
 	
 	
 	// Allocate and zero-initialize the byte storage for all slots
-	u8 *work_mem_two_bytes;
-	work_mem_two_bytes = ml_kem_alloc((size_pk + size_ct + (size_t)(ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES)) * number_slots);
-	if(!work_mem_two_bytes) { return 1; }
-	ml_kem_memzero(work_mem_two_bytes, (size_pk + size_ct + (size_t)(ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES)) * number_slots);
+	u8 *work_mem_one_byte;
+	work_mem_one_byte = ml_kem_alloc((size_pk + size_ct + (size_t)(ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES)) * number_slots);
+	if(!work_mem_one_byte) { return 1; }
+	ml_kem_memzero(work_mem_one_byte, (size_pk + size_ct + (size_t)(ML_KEM_MATRIX_XOF_BYTES + ML_KEM_KECCAK_STATE_BYTES)) * number_slots);
 	// Preserve the allocation base in the pool for later cleanup
-	if(k == ML_KEM_512) { ctx->all_u8_mem_512 = work_mem_two_bytes; }
-	else if(k == ML_KEM_768) { ctx->all_u8_mem_768 = work_mem_two_bytes; }
-	else if(k == ML_KEM_1024) { ctx->all_u8_mem_1024 = work_mem_two_bytes; }
+	if(k == ML_KEM_512) { ctx->all_u8_mem_512 = work_mem_one_byte; }
+	else if(k == ML_KEM_768) { ctx->all_u8_mem_768 = work_mem_one_byte; }
+	else if(k == ML_KEM_1024) { ctx->all_u8_mem_1024 = work_mem_one_byte; }
 	
 	// Divide the shared allocation into separate byte regions for each slot
 	for(size_t i = 0; i < number_slots; i++)
 	{
 		// Serialized public key used by this encapsulation context
-		first_slot[i].encaps_ctx->public_key_msg = work_mem_two_bytes;
-		work_mem_two_bytes += size_pk;
+		first_slot[i].encaps_ctx->public_key_msg = work_mem_one_byte;
+		work_mem_one_byte += size_pk;
 		
 		// Output ciphertext buffer for this slot
-		first_slot[i].encaps_ctx->ciphertext = work_mem_two_bytes;
-		work_mem_two_bytes += size_ct;
+		first_slot[i].encaps_ctx->ciphertext = work_mem_one_byte;
+		work_mem_one_byte += size_ct;
 		
 		// Temporary SHAKE/XOF output buffer used during polynomial generation
-		first_slot[i].encaps_ctx->raw_bytes = work_mem_two_bytes;
-		work_mem_two_bytes += ML_KEM_MATRIX_XOF_BYTES;
-		shake_ctx_get_mem(&first_slot[i].encaps_ctx->shake, (u64 *)work_mem_two_bytes, ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
-		sha3_ctx_get_mem(&first_slot[i].encaps_ctx->sha3, (u64 *)work_mem_two_bytes, ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
-		work_mem_two_bytes += ML_KEM_KECCAK_STATE_BYTES;
+		first_slot[i].encaps_ctx->raw_bytes = work_mem_one_byte;
+		work_mem_one_byte += ML_KEM_MATRIX_XOF_BYTES;
+		shake_ctx_get_mem(&first_slot[i].encaps_ctx->shake, (u64 *)work_mem_one_byte, ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
+		sha3_ctx_get_mem(&first_slot[i].encaps_ctx->sha3, (u64 *)work_mem_one_byte, ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
+		work_mem_one_byte += ML_KEM_KECCAK_STATE_BYTES;
 	}
 	
 	return 0;

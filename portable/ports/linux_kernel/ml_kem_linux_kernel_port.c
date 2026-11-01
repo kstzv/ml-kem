@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0 OR MIT
 // Copyright (c) 2026 K.S.Zavertailo
-
 #include "ml_kem_linux_kernel_port.h"
 #include "ml_kem_core_header.h"
 

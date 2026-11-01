@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+// Copyright (c) 2026 K.S.Zavertailo
+
 #define _POSIX_C_SOURCE 200809L
 
 #include <pthread.h>

@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+// Copyright (c) 2026 K.S.Zavertailo
 #include "ml_kem_userspace_port.h"
-
 
 // Functions for allocations
 void *ml_kem_alloc(size_t size_alloc) { return malloc(size_alloc); }

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+// Copyright (c) 2026 K.S.Zavertailo
 #include "ml_kem_core_header.h"
 
 // Functions for allocations
@@ -91,7 +93,6 @@ struct ml_kem_general_keys_decaps_ctx *err_create_object_from_imported_sk(const 
 
 // Error in encaps
 int err_encaps(const int err) { return err; }
-
 
 // Error in decaps
 int err_decaps(const int err) { return err; }
