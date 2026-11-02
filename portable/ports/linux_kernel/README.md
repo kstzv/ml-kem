@@ -62,12 +62,10 @@ And then execute the following command:
 		
 ## Installation
 
-To install, run the following commands:
+Build and install the configured kernel following
+the procedure appropriate for your Linux distribution.
 
-		sudo make modules_install
-		sudo make install
-		
-Reboot the system into the newly built kernel.
+Reboot into the newly installed kernel.
 
 ## Verification
 
