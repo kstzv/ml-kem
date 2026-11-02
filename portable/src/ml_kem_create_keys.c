@@ -13,10 +13,6 @@ struct ml_kem_temp *ml_kem_temp_alloc(enum ml_kem_k level);
 struct ml_kem_ctx *ml_kem_ctx_alloc(enum ml_kem_k level);
 void ml_kem_destroy_temp_struct(struct ml_kem_temp *temp);
 void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx);
-int ml_kem_entropy(void *buf, size_t len);
-
-// Secure memory wipe (implementation-defined)
-void ml_kem_memzero(void *ptr, size_t len);
 
 // Internal (static) helpers
 STATIC int ml_kem_generation_entropy(struct ml_kem_temp *temp,  ml_kem_entropy_fn entropy);
