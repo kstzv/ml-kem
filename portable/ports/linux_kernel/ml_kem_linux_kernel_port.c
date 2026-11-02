@@ -30,7 +30,7 @@ bool ml_kem_try_acquire_slot(ml_kem_atomic_t *slot)
 // Create atomic variable
 void ml_kem_release_slot(ml_kem_atomic_t *slot)
 {
-    atomic_set(slot, 1);
+    atomic_set_release(slot, 1);
 }
 
 // Free slot

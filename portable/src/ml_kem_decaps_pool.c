@@ -142,7 +142,7 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_alloc_decaps_pool(enum ml_kem_k le
 	// Error handling with reverse-order cleanup 
 	#if FULL_MATRIX
 	seventh_exit:
-		ml_kem_free(two_bytes_ptrs);
+		ml_kem_free(head_pool->two_bytes_mem_ptrs);
 	#endif
 	sixth_error_exit:
 		ml_kem_free(raw_bytes);

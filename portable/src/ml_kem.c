@@ -147,9 +147,9 @@ struct ml_kem_general_keys_decaps_ctx *ml_kem_create_object_from_imported_sk(u8 
 	
 	// Check hash in sk messege
 	u8 computed_hash[ML_KEM_SEED_BYTES];
-	u8 mem_keccak[ML_KEM_KECCAK_STATE_BYTES];
+	u64 mem_keccak[25];
 	struct sha3_ctx sha_ctx;
-	sha3_ctx_get_mem(&sha_ctx, (u64 *)mem_keccak, ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
+	sha3_ctx_get_mem(&sha_ctx, mem_keccak, ML_KEM_KECCAK_STATE_BYTES/sizeof(u64));
 	sha3_ctx_init(&sha_ctx, ctx_keys->public_key_msg, size_pk, computed_hash);
 	sha3_256(&sha_ctx);
 	if(memcmp(computed_hash, ctx_keys->h_pk, ML_KEM_SEED_BYTES) != 0)

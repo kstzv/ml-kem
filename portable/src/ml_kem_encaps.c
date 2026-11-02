@@ -225,8 +225,25 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
 
 		// Client-side path:
 		// generate fresh random m and compute H(pk)
-		if(entropy == NULL) { if(ml_kem_entropy(first_seed_encaps, ML_KEM_SEED_BYTES) != 0) { ctx->err = -ML_KEM_SYSTEM_ENTROPY_FAILED; return; } }
-		else { if(entropy(first_seed_encaps, ML_KEM_SEED_BYTES) != 0) { ctx->err = -ML_KEM_CALLBACK_ENTROPY_FAILED; return; } }
+		if(entropy == NULL) 
+		{ 
+			if(ml_kem_entropy(first_seed_encaps, ML_KEM_SEED_BYTES) != 0) 
+			{ 
+				ml_kem_memzero(first_seed_encaps, sizeof(first_seed_encaps));
+				ml_kem_memzero(result_seeds, sizeof(result_seeds));
+				ctx->err = -ML_KEM_SYSTEM_ENTROPY_FAILED; 
+				return; 
+			} 
+		}else 
+		{ 
+			if(entropy(first_seed_encaps, ML_KEM_SEED_BYTES) != 0) 
+			{ 
+				ml_kem_memzero(first_seed_encaps, sizeof(first_seed_encaps));
+				ml_kem_memzero(result_seeds, sizeof(result_seeds));
+				ctx->err = -ML_KEM_CALLBACK_ENTROPY_FAILED; 
+				return; 
+			} 
+		}
 
 		memcpy(ctx->seed_m, first_seed_encaps, ML_KEM_SEED_BYTES);
 		

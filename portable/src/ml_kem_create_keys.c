@@ -274,8 +274,23 @@ STATIC int ml_kem_generation_entropy(struct ml_kem_temp *temp, ml_kem_entropy_fn
 	
 #else             // Read 32 bytes of system entropy
     
-    if(entropy == NULL) { if(ml_kem_entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_SYSTEM_ENTROPY_FAILED; } }
-    else { if(entropy(first_seed, ML_KEM_SEED_BYTES) != 0) { return -ML_KEM_CALLBACK_ENTROPY_FAILED; } }
+    if(entropy == NULL) 
+    { 
+		if(ml_kem_entropy(first_seed, ML_KEM_SEED_BYTES) != 0) 
+		{ 
+			ml_kem_memzero(first_seed, sizeof(first_seed));
+			ml_kem_memzero(seeds_rho_and_sigma, sizeof(seeds_rho_and_sigma));
+			return -ML_KEM_SYSTEM_ENTROPY_FAILED; 
+		} 
+	}else 
+	{ 
+		if(entropy(first_seed, ML_KEM_SEED_BYTES) != 0) 
+		{ 
+			ml_kem_memzero(first_seed, sizeof(first_seed));
+			ml_kem_memzero(seeds_rho_and_sigma, sizeof(seeds_rho_and_sigma));
+			return -ML_KEM_CALLBACK_ENTROPY_FAILED; 
+		}	
+	}
 
 #endif
 	
