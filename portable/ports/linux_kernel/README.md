@@ -50,9 +50,11 @@ Configure the kernel:
 		cd linux
 		make menuconfig
 		
-Enable:
+Search for the configuration symbol using `/`:
 
-		ML-KEM (FIPS 203) support
+		ML_KEM
+		
+Enable it as built-in (`Y`).
 		
 And then execute the following command:
 
