@@ -131,7 +131,7 @@ static int test_entropy(void *buf, size_t len)
     return 0;
 }
 
-#define TEST_STACK_DEPTH 512 // size stack
+#define TEST_STACK_DEPTH 512 // Cortex-M3: 512 StackType_t words = 2048 bytes
 
 int main( void )
 {
@@ -169,94 +169,139 @@ int main( void )
 }
 /*-----------------------------------------------------------*/
 
-// Function for ml-kem test
+// Test ML-KEM key generation, encapsulation, and decapsulation in QEMU.
+// WARNING: test_entropy() is deterministic and MUST NOT be used in production.
 static void ml_kem_test_task(void *argument)
 {
     (void)argument;
 
-    /* Тут буде тест ML-KEM. */
-    const size_t number_iterations = 1000;
-    const uint8_t number_slots = 1;
-    for(size_t i = 0; i < number_iterations; i++)
-    {
-		// Create buffers for pk keys
-		uint8_t *buffer_pk_512 = pvPortMalloc(RES_PUBL_PART_LVL_512);
-		if(!buffer_pk_512) { printf("Failed ml_kem_get_public_key()\r\n"); goto exit_1; }
-		uint8_t *buffer_pk_768 = pvPortMalloc(RES_PUBL_PART_LVL_768);
-		if(!buffer_pk_768) { printf("Failed ml_kem_get_public_key()\r\n"); goto exit_2; }
-		uint8_t *buffer_pk_1024 = pvPortMalloc(RES_PUBL_PART_LVL_1024);
-		if(!buffer_pk_1024) { printf("Failed ml_kem_get_public_key()\r\n"); goto exit_3; }
-		
-		// Create objects for ML-KEM
-		struct ml_kem_pool_decaps_ctx *ctx_512 = ml_kem_create_object(ML_KEM_512, number_slots, test_entropy);
-		if(!ctx_512) { printf("Failed ml_kem_create_objec()\r\n"); goto exit_4; }
-		struct ml_kem_pool_decaps_ctx *ctx_768 = ml_kem_create_object(ML_KEM_768, number_slots, test_entropy);
-		if(!ctx_768) { printf("Failed ml_kem_create_objec()\r\n"); goto exit_5; }
-		struct ml_kem_pool_decaps_ctx *ctx_1024 = ml_kem_create_object(ML_KEM_1024, number_slots, test_entropy);
-		if(!ctx_1024) { printf("Failed ml_kem_create_objec()\r\n"); goto exit_6; }
-		
-		// Get keys for objects
-		int ret = ml_kem_get_public_key(ctx_512, buffer_pk_512, RES_PUBL_PART_LVL_512);
-		if(ret != 0) { printf("Failed ml_kem_get_public_key()\r\n"); goto exit_7; }
-		ret = ml_kem_get_public_key(ctx_768, buffer_pk_768, RES_PUBL_PART_LVL_768);
-		if(ret != 0) { printf("Failed ml_kem_get_public_key()\r\n"); goto exit_7; }
-		ret = ml_kem_get_public_key(ctx_1024, buffer_pk_1024, RES_PUBL_PART_LVL_1024);
-		if(ret != 0) { printf("Failed ml_kem_get_public_key()\r\n"); goto exit_7; }
-		
-		// Encapsulations
-		uint8_t ss_512[ML_KEM_SEED_BYTES];
-		uint8_t ss_768[ML_KEM_SEED_BYTES];
-		uint8_t ss_1024[ML_KEM_SEED_BYTES];
-		uint8_t *ctx_encaps_512 = ml_kem_encaps_core(buffer_pk_512, ML_KEM_512, ss_512, test_entropy);
-		if(!ctx_encaps_512) { printf("Failed ml_kem_encaps_core()\r\n"); goto exit_7; }
-		uint8_t *ctx_encaps_768 = ml_kem_encaps_core(buffer_pk_768, ML_KEM_768, ss_768, test_entropy);
-		if(!ctx_encaps_768) { printf("Failed ml_kem_encaps_core()\r\n"); goto exit_8; }
-		uint8_t *ctx_encaps_1024 = ml_kem_encaps_core(buffer_pk_1024, ML_KEM_1024, ss_1024, test_entropy);
-		if(!ctx_encaps_1024) { printf("Failed ml_kem_encaps_core()\r\n"); goto exit_9; }
-		
-		// Decapsulations
-		uint8_t ss_512_d[ML_KEM_SEED_BYTES];
-		uint8_t ss_768_d[ML_KEM_SEED_BYTES];
-		uint8_t ss_1024_d[ML_KEM_SEED_BYTES];
-		ret = ml_kem_decaps_core(ctx_512, ctx_encaps_512, LEN_CIPHERTEXT_512, ss_512_d, ML_KEM_SEED_BYTES);
-		if(ret != 0) { printf("Failed ml_kem_decaps_core()\r\n"); goto exit_10; }
-		ret = ml_kem_decaps_core(ctx_768, ctx_encaps_768, LEN_CIPHERTEXT_768, ss_768_d, ML_KEM_SEED_BYTES);
-		if(ret != 0) { printf("Failed ml_kem_decaps_core()\r\n"); goto exit_10; }
-		ret = ml_kem_decaps_core(ctx_1024, ctx_encaps_1024, LEN_CIPHERTEXT_1024, ss_1024_d, ML_KEM_SEED_BYTES);
-		if(ret != 0) { printf("Failed ml_kem_decaps_core()\r\n"); goto exit_10; }
-		
-		// Check ss
-		if(memcmp(ss_512, ss_512_d, ML_KEM_SEED_BYTES) != 0) { printf("Different shared secrets\n"); goto exit_10; }
-		if(memcmp(ss_768, ss_768_d, ML_KEM_SEED_BYTES) != 0) { printf("Different shared secrets\n"); goto exit_10; }
-		if(memcmp(ss_1024, ss_1024_d, ML_KEM_SEED_BYTES) != 0) { printf("Different shared secrets\n"); goto exit_10; }
-		
-		printf("It is OK.....\n");
-		
-		exit_10:
-			ml_kem_ciphertext_destroy_core(ctx_encaps_1024, ML_KEM_1024);
-		exit_9:
-			ml_kem_ciphertext_destroy_core(ctx_encaps_768, ML_KEM_768);
-		exit_8:
-			ml_kem_ciphertext_destroy_core(ctx_encaps_512, ML_KEM_512);
-		exit_7:
-			ml_kem_destroy_core(ctx_1024);
-		exit_6:
-			ml_kem_destroy_core(ctx_768);
-		exit_5:
-			ml_kem_destroy_core(ctx_512);
-		exit_4:
-			vPortFree(buffer_pk_1024);
-		exit_3:
-			vPortFree(buffer_pk_768);
-		exit_2:
-			vPortFree(buffer_pk_512);	
-		exit_1:
-			printf("Iteration %u cleanup finished\r\n", (unsigned int)(i + 1));
-	}
-				
-			
-	printf("Test finished\n");
+    static const struct {
+        enum ml_kem_k level;
+        size_t size_pk;
+        size_t size_ct;
+        const char *name;
+    } test_cases[] = {
+        { ML_KEM_512,  RES_PUBL_PART_LVL_512,  LEN_CIPHERTEXT_512,  "ML-KEM-512"  },
+        { ML_KEM_768,  RES_PUBL_PART_LVL_768,  LEN_CIPHERTEXT_768,  "ML-KEM-768"  },
+        { ML_KEM_1024, RES_PUBL_PART_LVL_1024, LEN_CIPHERTEXT_1024, "ML-KEM-1024" }
+    };
 
+    const size_t number_iterations = 1000;
+    const size_t number_decaps_slots = 1;
+
+    // Test one parameter set at a time to limit the peak FreeRTOS heap usage.
+    for (size_t level_index = 0; level_index < sizeof(test_cases) / sizeof(test_cases[0]); ++level_index)
+    {
+        const enum ml_kem_k level = test_cases[level_index].level;
+        const size_t size_pk = test_cases[level_index].size_pk;
+        const size_t size_ct = test_cases[level_index].size_ct;
+        const char *name = test_cases[level_index].name;
+
+        // One reusable encapsulation slot for this parameter set.
+        // Other subpools are disabled (slot count 0).
+        struct ml_kem_pool_encaps_ctx *encaps_pool = create_encaps_pool(level == ML_KEM_512  ? 1 : 0, level == ML_KEM_768  ? 1 : 0, level == ML_KEM_1024 ? 1 : 0);
+        if (encaps_pool == NULL)
+        {
+            printf("FAIL %s: create_encaps_pool()\r\n", name);
+            goto test_failed;
+        }
+
+        printf("Testing %s: %u iterations\r\n", name, (unsigned int)number_iterations);
+
+        for (size_t i = 0; i < number_iterations; ++i)
+        {
+            uint8_t *pk = NULL;
+            uint8_t *ct = NULL;
+            struct ml_kem_general_keys_decaps_ctx *decaps_ctx = NULL;
+            uint8_t ss_encaps[ML_KEM_SEED_BYTES] = { 0 };
+            uint8_t ss_decaps[ML_KEM_SEED_BYTES] = { 0 };
+            const char *failed_step = NULL;
+            int ret = 0;
+
+            do
+            {
+                pk = pvPortMalloc(size_pk);
+                if (pk == NULL) { failed_step = "pvPortMalloc(pk)"; break; }
+
+                ct = pvPortMalloc(size_ct);
+                if (ct == NULL) { failed_step = "pvPortMalloc(ct)"; break; }
+
+                decaps_ctx = ml_kem_create_object(level, number_decaps_slots, test_entropy);
+                if (decaps_ctx == NULL) { failed_step = "ml_kem_create_object"; break; }
+
+                ret = ml_kem_get_public_key(decaps_ctx, pk, size_pk);
+                if (ret != 0) { failed_step = "ml_kem_get_public_key"; break; }
+
+                // Alternate between reusable-pool and temporary-context modes.
+                // This verifies both branches of the new encapsulation API.
+                struct ml_kem_pool_encaps_ctx *active_pool =
+                    ((i & 1u) == 0u) ? encaps_pool : NULL;
+
+                ret = ml_kem_encaps_core(active_pool,
+                                          pk, size_pk, ct, size_ct,
+                                          ss_encaps, sizeof(ss_encaps),
+                                          test_entropy);
+                if (ret != 0) { failed_step = "ml_kem_encaps_core"; break; }
+
+                ret = ml_kem_decaps_core(decaps_ctx,
+                                          ct, size_ct,
+                                          ss_decaps, sizeof(ss_decaps));
+                if (ret != 0) { failed_step = "ml_kem_decaps_core"; break; }
+
+                if (memcmp(ss_encaps, ss_decaps, ML_KEM_SEED_BYTES) != 0)
+                {
+                    failed_step = "shared secrets differ";
+                    break;
+                }
+            }
+            while (0);
+
+            if (failed_step != NULL)
+            {
+                if (ret != 0)
+                {
+                    printf("FAIL %s, iteration %u: %s (ret=%d)\r\n",
+                           name, (unsigned int)(i + 1), failed_step, ret);
+                }
+                else
+                {
+                    printf("FAIL %s, iteration %u: %s\r\n",
+                           name, (unsigned int)(i + 1), failed_step);
+                }
+            }
+
+            // Clean up on every path (success and failure).
+            ml_kem_memzero(ss_encaps, sizeof(ss_encaps));
+            ml_kem_memzero(ss_decaps, sizeof(ss_decaps));
+            ml_kem_destroy_core(decaps_ctx);  // Safe with NULL.
+            vPortFree(ct);
+            vPortFree(pk);
+
+            if (failed_step != NULL)
+            {
+                ml_kem_encaps_pool_destroy(encaps_pool);
+                goto test_failed;
+            }
+
+            if ((i + 1) % 100 == 0)
+            {
+                printf("%s: %u/%u OK\r\n", name,
+                       (unsigned int)(i + 1), (unsigned int)number_iterations);
+            }
+        }
+
+        ml_kem_encaps_pool_destroy(encaps_pool);
+        printf("PASS %s\r\n", name);
+    }
+
+    printf("PASS: all ML-KEM parameter sets and both encapsulation modes\r\n");
+    goto test_finished;
+
+test_failed:
+    printf("FAIL: ML-KEM QEMU reference test aborted\r\n");
+
+test_finished:
+    // Leave the test task alive and idle so serial output remains visible.
     for (;;)
     {
         vTaskDelay(portMAX_DELAY);

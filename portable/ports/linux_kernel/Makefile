@@ -12,6 +12,7 @@ pqc_ml_kem-y := \
         ml_kem_ntt_main.o \
         ml_kem_sha3.o \
         ml_kem_shake.o \
-        keccak1600.o \
-        ml_kem_pool.o \
-        ml_kem_linux_kernel_port.o
+        keccak_1600.o \
+        ml_kem_decaps_pool.o \
+        ml_kem_linux_kernel_port.o \
+        ml_kem_encaps_pool.o
