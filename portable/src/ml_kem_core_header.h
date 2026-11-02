@@ -292,7 +292,7 @@ extern void ml_kem_destroy_ctx_struct(struct ml_kem_ctx *ctx);
 extern struct ml_kem_encaps_ctx *ml_kem_alloc_encaps(u8 *public_key_msg, enum ml_kem_k k);
 extern void ml_kem_wipe_encaps(struct ml_kem_encaps_ctx *ctx);
 extern void ml_kem_destroy_encaps(struct ml_kem_encaps_ctx *ctx);
-extern void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, ml_kem_entropy_fn entropy);
+extern int ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, ml_kem_entropy_fn entropy);
 extern void ml_kem_unpack_pk_t_u16(struct ml_kem_encaps_ctx *ctx);
 
 // Decryption API (File #4)

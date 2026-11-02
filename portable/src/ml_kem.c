@@ -281,9 +281,8 @@ int ml_kem_encaps_core(struct ml_kem_pool_encaps_ctx *ctx_pool, u8 *pk, size_t s
 	}
 	
 	// Perform encapsulation (client mode: msg=NULL, hash_pk=NULL)
-	int ret = 0;
-	ml_kem_encapsulation(ctx, NULL, NULL, entropy);
-	if(ctx->err != 0) { ret = err_encaps(ctx->err); goto exit; } 
+	int ret = ml_kem_encapsulation(ctx, NULL, NULL, entropy);
+	if(ret != 0) { goto exit; } 
 	
 	// Write both output values only after successful encapsulation
 	memcpy(buffer_ss, ctx->K_bar, ML_KEM_SEED_BYTES);
@@ -365,7 +364,7 @@ int ml_kem_decaps_core(struct ml_kem_general_keys_decaps_ctx *ctx, u8 *ciphertex
 	
 	// Step 2: Re-encapsulate using recovered m and stored h(pk)
 	// This reconstructs expected ciphertext and shared secret
-	ml_kem_encapsulation(ctx->ml_kem_pool[curr_slot].encaps_ctx, ctx->ml_kem_pool[curr_slot].decrypt_ctx->m, ctx->ml_kem_pool[curr_slot].decrypt_ctx->ctx->h_pk, NULL);
+	(void)ml_kem_encapsulation(ctx->ml_kem_pool[curr_slot].encaps_ctx, ctx->ml_kem_pool[curr_slot].decrypt_ctx->m, ctx->ml_kem_pool[curr_slot].decrypt_ctx->ctx->h_pk, NULL);
 	
 	// Steps from 3 to 6 doing in this local functions. This functions must be CT
 	ml_kem_decaps_ct_select_ss(ctx, ciphertext, len_ciphertext, result, curr_slot);

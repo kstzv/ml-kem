@@ -9,7 +9,7 @@
 struct ml_kem_encaps_ctx *ml_kem_alloc_encaps(u8 *public_key_msg, enum ml_kem_k k);
 void ml_kem_wipe_encaps(struct ml_kem_encaps_ctx *ctx);
 void ml_kem_destroy_encaps(struct ml_kem_encaps_ctx *ctx);
-void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, ml_kem_entropy_fn entropy);
+int ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, ml_kem_entropy_fn entropy);
 void ml_kem_unpack_pk_t_u16(struct ml_kem_encaps_ctx *ctx);
 
 // Internal (file-local) helper functions
@@ -188,13 +188,11 @@ void ml_kem_destroy_encaps(struct ml_kem_encaps_ctx *ctx)
 //  - Server side (during decapsulation): both msg and hash_pk must be provided
 //  - entropy parameter - callback used to obtain cryptographically secure random bytes. NULL if using the operating system's random data source
 // NOTE: msg and hash_pk must either both be valid or both be NULL.
-void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, ml_kem_entropy_fn entropy)
+int ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, ml_kem_entropy_fn entropy)
 {
-	ctx->err = 0; // Starting value of error
-	
 	// Validate consistency of (msg, hash_pk) pair:
 	// either both provided (decapsulation flow) or both NULL (encapsulation flow)
-	if((msg && !hash_pk) || (!msg && hash_pk)) { ctx->err = -ML_KEM_ENCAPS_PARAM_ERR; return; }
+	if((msg && !hash_pk) || (!msg && hash_pk)) { return -ML_KEM_ENCAPS_PARAM_ERR; }
 	
 	// Buffers:
 	// first_seed_encaps = (m || H(pk))
@@ -231,8 +229,7 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
 			{ 
 				ml_kem_memzero(first_seed_encaps, sizeof(first_seed_encaps));
 				ml_kem_memzero(result_seeds, sizeof(result_seeds));
-				ctx->err = -ML_KEM_SYSTEM_ENTROPY_FAILED; 
-				return; 
+				return -ML_KEM_SYSTEM_ENTROPY_FAILED; 
 			} 
 		}else 
 		{ 
@@ -240,8 +237,7 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
 			{ 
 				ml_kem_memzero(first_seed_encaps, sizeof(first_seed_encaps));
 				ml_kem_memzero(result_seeds, sizeof(result_seeds));
-				ctx->err = -ML_KEM_CALLBACK_ENTROPY_FAILED; 
-				return; 
+				return -ML_KEM_CALLBACK_ENTROPY_FAILED; 
 			} 
 		}
 
@@ -292,6 +288,8 @@ void ml_kem_encapsulation(struct ml_kem_encaps_ctx *ctx, u8 *msg, u8 *hash_pk, m
     
     // Clear sensitive temporary buffer
     ml_kem_memzero(result_seeds, sizeof(result_seeds));
+    
+    return 0;
 }
     
     
