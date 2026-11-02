@@ -4,8 +4,8 @@
 #include "ml_kem_core_header.h"
 
 // Memory allocations and free memory
-void *ml_kem_alloc(size_t size_alloc) { return kzalloc(size_alloc, GFP_KERNEL); }
-void ml_kem_free(void *ptr) { kfree(ptr); }
+void *ml_kem_alloc(size_t size_alloc) { return kvzalloc(size_alloc, GFP_KERNEL); }
+void ml_kem_free(void *ptr) { kvfree(ptr); }
 
 // Get random bytes from kernel
 int ml_kem_entropy(void *buf, size_t len)
