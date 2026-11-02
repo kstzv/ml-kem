@@ -15,7 +15,9 @@
 #define ML_KEM_CALLBACK_ENTROPY_FAILED 135
 #define ML_KEM_ENCAPS_PARAM_ERR        136
 
-
+#ifndef FULL_MATRIX
+#define FULL_MATRIX 0
+#endif
 
 // HEADERS
 #if defined(USERSPACE)
@@ -25,6 +27,11 @@
 #elif defined(LINUX_KERNEL)
 
 #include "ml_kem_linux_kernel_port.h"
+
+#define sha3_256 ml_kem_sha3_256
+#define sha3_512 ml_kem_sha3_512
+#define shake128 ml_kem_shake128
+#define shake256 ml_kem_shake256
 
 #elif defined(FREERTOS)
 
