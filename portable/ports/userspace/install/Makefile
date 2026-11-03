@@ -1,27 +1,17 @@
-PREFIX ?= /usr/local
+CC = cc
+CFLAGS = -O2 -std=c11 -Wall -Wextra -I. -DUSERSPACE -DFULL_MATRIX=0
 
-INCLUDEDIR = $(DESTDIR)$(PREFIX)/include
-LIBDIR = $(DESTDIR)$(PREFIX)/lib
+SOURCES = ml_kem.c ml_kem_create_keys.c ml_kem_decaps_pool.c \
+          ml_kem_decrypt.c ml_kem_encaps.c ml_kem_encaps_pool.c \
+          ml_kem_ntt_main.c ml_kem_sha3.c ml_kem_shake.c \
+          keccak_1600.c ml_kem_userspace_port.c test_api_userspace.c
 
-.PHONY: install uninstall
+.PHONY: all clean
+all: test_api_userspace
+	./test_api_userspace
 
-install:
-	mkdir -p $(INCLUDEDIR)
-	mkdir -p $(LIBDIR)
+test_api_userspace: $(SOURCES)
+	$(CC) $(CFLAGS) $(SOURCES) -o $@
 
-	cp ../../../src/ml_kem.h $(INCLUDEDIR)/
-	cp ../ml_kem_userspace_port.h $(INCLUDEDIR)/
-
-	sed '/^#if defined(USERSPACE)/,/^#endif \/\/ HEADERS/c\
-#include <ml_kem_userspace_port.h>' \
-	../../../src/ml_kem_core_header.h \
-	> $(INCLUDEDIR)/ml_kem_core_header.h
-
-	cp ../libmlkem.a $(LIBDIR)/
-
-uninstall:
-	rm -f \
-		$(INCLUDEDIR)/ml_kem.h \
-		$(INCLUDEDIR)/ml_kem_core_header.h \
-		$(INCLUDEDIR)/ml_kem_userspace_port.h \
-		$(LIBDIR)/libmlkem.a
+clean:
+	rm -f test_api_userspace

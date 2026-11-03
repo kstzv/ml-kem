@@ -28,7 +28,9 @@ Core API and structures are defined in the public headers of the implementation.
 
 During extended dudect runs involving tens or hundreds of millions of measurements, some low-level arithmetic routines may exhibit a slow, gradual increase of the reported t-statistic.
 
-In the performed experiments, this increase was smooth and progressive rather than abrupt. No sudden jumps or rapid divergence—behavior commonly associated with strong timing leakage—were observed.
+A gradual increase in the reported t-statistic does not, by itself, establish whether the observed behavior is caused by genuine timing leakage or measurement artifacts. 
+
+Reproducible increases should be investigated through repeated measurements, inspection of generated machine code, and testing under different compiler configurations and execution environments.
 
 Such gradual drift can arise from accumulated statistical bias, operating system scheduling, compiler optimizations, microarchitectural effects, or other measurement noise present in long-running experiments.
 

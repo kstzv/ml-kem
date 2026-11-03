@@ -56,11 +56,11 @@ And run:
      make pq768
      make pq1024
 
-## Throughput
+## Throughput decaps pool
 
 Go to:
 
-portable/userspace/benchmarks/test_throughput
+portable/userspace/benchmarks/test_decaps_throughput
 
 And run:
 
@@ -72,31 +72,62 @@ And run:
      ./kstzv_throughput_ml_kem_1024
      ./pqclean_throughput_ml_kem_1024
 
-# Throughput Benchmark
+## Throughput encaps pool
+
+Go to:
+
+portable/userspace/benchmarks/test_encaps_throughput
+
+And run:
+
+     make
+     ./kstzv_throughput_ml_kem_512
+     ./pqclean_throughput_ml_kem_512
+     ./kstzv_throughput_ml_kem_768
+     ./pqclean_throughput_ml_kem_768
+     ./kstzv_throughput_ml_kem_1024
+     ./pqclean_throughput_ml_kem_1024
+
+# Throughput decaps Benchmark
 
 By default, throughput benchmarks use 16 threads and 100,000 iterations per thread. These values are defined as compile-time constants and may be adjusted freely for additional testing.
 
-| Security Level | This Implementation | PQClean   |
+| Security Level | This Implementation (ops/s) | PQClean (ops/s) |
 |----------------|---------------------|---------- |
-| ML-KEM-512     |      125500.68      | 121938.03 |
-| ML-KEM-768     |      75957.61       | 77478.29  |
-| ML-KEM-1024    |      50054.52       | 53649.98​  |
+| ML-KEM-512     |      142717.10      | 124537.57 |
+| ML-KEM-768     |      87488.08       | 77062.56  |
+| ML-KEM-1024    |      58032.95       | 53935.32​  |
 
-Throughput is roughly equal to PQClean at security levels 512 and 768, and slightly inferior at level 1024 (approximately in the range of 6 - 8%), but it maintains significantly less stack usage.
+In the reported benchmark runs, this implementation achieved higher throughput than PQClean across all three security levels, with improvements ranging from approximately 7.6% to 14.6%.
+
+# Throughput encaps Benchmark
+
+By default, throughput benchmarks use 16 threads and 100,000 iterations per thread. These values are defined as compile-time constants and may be adjusted freely for additional testing.
+
+| Security Level | This Implementation (ops/s) | PQClean (ops/s) |
+|----------------|---------------------|---------- |
+| ML-KEM-512     |      175225.62      | 163218.62 |
+| ML-KEM-768     |      103501.98      | 98966.70  |
+| ML-KEM-1024    |      66861.54       | 65625.39  |
+
+In the reported benchmark runs, this implementation achieved higher throughput than PQClean across all three security levels, with improvements ranging from approximately 1.9% to 7.4%.
 
 # Stack Usage
 
 
 | Security Level | This Implementation | PQClean |
 |----------------|---------------------|---------|
-| ML-KEM-512     |       1040 B        | 7824 B  |
-| ML-KEM-768     |       1040 B        | 12432 B |
-| ML-KEM-1024    |       1040 B        | 18624 B​ |
+| ML-KEM-512     |       1032 B        | 7824 B  |
+| ML-KEM-768     |       1032 B        | 12432 B |
+| ML-KEM-1024    |       1032 B        | 18624 B​ |
 
 The stack usage values are not derived using identical methodologies.
 
-For this implementation, the reported value (~1040 B) is an estimate of the deepest cumulative call chain during decapsulation:
-ml_kem_decaps_core() -> ml_kem_encapsulation() -> ml_kem_shake256() -> keccak_f1600_ct()
+For this implementation, the reported value (1032 B) is an estimate based on the cumulative stack frames of the following decapsulation call chain:
+
+`ml_kem_decaps_core() -> ml_kem_encapsulation() -> ml_kem_create_u() -> shake128() -> keccak_f1600()`
+
+The estimate is based on GCC `-fstack-usage` reports and is not a measurement of the complete runtime stack high-water mark.
 
 For PQClean, the values are taken from GCC `-fstack-usage` reports for the largest decapsulation-related function of each security level:
 PQCLEAN_MLKEM512_CLEAN_indcpa_enc(), PQCLEAN_MLKEM768_CLEAN_indcpa_enc and PQCLEAN_MLKEM1024_CLEAN_indcpa_enc()
@@ -105,12 +136,14 @@ Note: Stack usage may vary across architectures, compiler versions, and optimiza
 
 # Memory Usage
 
-| Security Level | Persistent memory | Per-slot memory  |
-|----------------|-------------------|------------------|
-| ML-KEM-512     |     2040 B        | 11 kB 128 bytes  |
-| ML-KEM-768     |     2936 B        | 14 kB 128 bytes  |
-| ML-KEM-1024    |     3832 B        | 17 kB 448 bytes​  |
+| Security Level | Persistent memory | Per-slot memory | Total (1 slot) |
+|----------------|-------------------|-----------------|----------------|
+| ML-KEM-512     | 2040 B            | 9792 B          | 11832 B        |
+| ML-KEM-768     | 2936 B            | 12864 B         | 15800 B        |
+| ML-KEM-1024    | 3832 B            | 16256 B         | 20088 B        |
 
+
+The reported memory sizes exclude allocator metadata and correspond to the default build configuration without full matrix precomputation.
 
 Notes:
 
@@ -150,5 +183,5 @@ Note: performance may vary depending on processor microarchitecture, cache hiera
 
 # Contact
 
-- GitHub: kstzv(https://github.com/kstzv)
+- GitHub: [kstzv](https://github.com/kstzv)
 - Email: kstzavertaylo@gmail.com

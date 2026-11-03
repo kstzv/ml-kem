@@ -28,7 +28,7 @@ The test loads deterministic vector data from:
 
 ML-KEM-keyGen-FIPS203/internalProjection.json
 
-this file got from(27.02.2026):
+this file got from(30.10.2026):
 
 https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ML-KEM-keyGen-FIPS203
 

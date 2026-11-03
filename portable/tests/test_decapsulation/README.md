@@ -1,88 +1,114 @@
-# ML-KEM Decapsulation Test
+# ML-KEM Decapsulation KAT Test (NIST FIPS 203)
 
-This directory contains a correctness test for the ML-KEM decapsulation path.
+This directory contains a Known Answer Test (KAT) for the ML-KEM decapsulation implementation, using test vectors provided by NIST through the Automated Cryptographic Validation Protocol (ACVP).
 
-The test performs a full ML-KEM flow:
+The test verifies that the implementation produces the expected 32-byte shared secret for predefined decapsulation inputs.
 
-1. create an ML-KEM object with a decapsulation pool;
-2. run encapsulation using the generated public key;
-3. run decapsulation using the generated private-key context;
-4. compare the shared secret produced by encapsulation with the shared secret produced by decapsulation.
-
-The test is executed for all three ML-KEM parameter sets:
+The following ML-KEM parameter sets are supported:
 
 - ML-KEM-512
 - ML-KEM-768
 - ML-KEM-1024
 
-For each parameter set, the test processes 25 NIST-derived test-vector entries, for a total of 75 checks.
+The test uses 30 NIST decapsulation test vectors.
 
 ## What this test verifies
 
-This test verifies that the implementation is able to complete the full encapsulation/decapsulation flow and recover the same 32-byte shared secret on both sides.
+Unlike a simple encapsulation/decapsulation round-trip test, this test compares the shared secret produced by the implementation against a predefined expected result from the NIST test vectors.
 
-In other words, for each tested case:
+Each test case contains the necessary input data, including the decapsulation key material, ciphertext, and expected shared secret.
 
-K_encaps == K_decaps
+For each test case, the implementation must satisfy:
 
-If the values differ, the implementation reports an error for the corresponding vector and parameter set
+```text
+K_decaps == K_expected
+```
 
-# Test logic
+The test verifies:
 
-The test reads seed data from:
+1. Correct processing of the decapsulation key material.
+2. Correct decryption of the received ciphertext.
+3. Correct re-encapsulation and ciphertext verification.
+4. Correct derivation of the final 32-byte shared secret.
+5. Correct handling of the implicit rejection mechanism for modified ciphertexts, where such cases are included in the test vectors.
 
-ML-KEM-keyGen-FIPS203/internalProjection.json
+A successful result indicates that the implementation produces the expected output for the tested NIST decapsulation cases.
 
+## Test Vectors
 
-this file got from(27.02.2026):
+The test vectors are obtained from the official NIST ACVP-Server repository:
 
-https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ML-KEM-keyGen-FIPS203
+https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files/ML-KEM-encapDecap-FIPS203
 
-For each vector, it creates a new ML-KEM object, performs encapsulation, then decapsulation, and compares the resulting shared secrets.
+Source file:
 
-The comparison uses memcmp() because this is a correctness test, not a constant-time leakage test.
+```text
+ML-KEM-encapDecap-FIPS203/internalProjection.json
+```
 
-Constant-time behavior is tested separately in the dedicated dudect tests.
+Source retrieval date: October 30, 2026.
 
-Build
+The vectors belong to the ML-KEM encapsulation/decapsulation testing specification defined for FIPS 203.
 
-    make
+## Test Logic
 
-The default compiler is gcc, but another compiler can be selected through CC:
+For each test vector, the test performs the following operations:
 
-    make CC=clang
+1. Selects the corresponding ML-KEM security level.
+2. Initializes the required ML-KEM key context and decapsulation pool using the provided key material.
+3. Reads the predefined ciphertext from the test vector.
+4. Executes the ML-KEM decapsulation operation.
+5. Obtains the resulting 32-byte shared secret.
+6. Compares the result against the expected shared secret provided by NIST.
+7. Reports success or failure for the corresponding test case.
+8. Releases the allocated resources before proceeding to the next test case.
 
-Run
+The shared secrets are compared using `memcmp()`.
 
-    ./test
+This is acceptable because the comparison is performed only within a functional correctness test. Constant-time properties of the implementation are evaluated separately using dedicated dudect tests.
 
-Clean
+## Build
 
-    make clean
+Build the test using:
 
-## Expected result
+```sh
+make
+```
 
-A successful run prints Done... messages for each tested vector and parameter set.
+## Run
 
-If a mismatch is detected, the test prints a message similar to:
+Execute the compiled test:
 
-Wrong! In <vector> vector, in ML-KEM-<level> level security!
+```sh
+./test
+```
 
-Such a result means that the decapsulation path did not reconstruct the same shared secret as encapsulation and the implementation must be investigated.
+## Clean
 
-Notes
+Remove generated build files:
 
-This test is focused on functional correctness of decapsulation.
+```sh
+make clean
+```
+
+## Expected Result
+
+A successful execution indicates that all processed test vectors produced the expected shared secrets.
+
+If a mismatch occurs, the test reports the corresponding vector and ML-KEM security level.
+
+A mismatch means that the implementation did not reproduce the expected NIST decapsulation result and requires investigation.
+
+## Notes
+
+This test focuses on validating the functional correctness of the ML-KEM decapsulation implementation against predefined NIST test vectors.
 
 It does not replace:
 
+1. Constant-time leakage testing.
+2. Memory-safety testing using sanitizers.
+3. Additional malformed-input and error-handling tests.
+4. Multithreaded decapsulation pool stress testing.
+5. Complete algorithm validation and certification through the NIST ACVP process.
 
- 1.NIST KAT validation;
- 
- 2.constant-time testing;
- 
- 3.memory-safety testing;
- 
- 4.invalid-input testing;
- 
- 5.multithreaded pool stress testing.
+Passing these test vectors demonstrates correctness for the tested cases but does not constitute official NIST certification.

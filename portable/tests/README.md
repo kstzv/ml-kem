@@ -42,16 +42,16 @@ Most tests are intentionally separated into independent categories to simplify d
 | Directory | Purpose |
 |---|---|
 | test_generation_keys | NIST KAT tests for key generation |
-| test_encapsulation | Encapsulation validation |
-| test_decapsulation | End-to-end decapsulation tests |
+| test_encapsulation | NIST KAT Encapsulation validation |
+| test_decapsulation | NIST KAT Decapsulation validation |
 | test_dudect_ml_kem | Constant-time leakage testing using dudect |
 | test_memory_safety | ASAN / LSAN / TSAN / MSAN / UBSAN |
-| test_pool | Stress testing of decapsulation pool |
+| test_pool | Stress testing of decapsulation and encapsulation pools |
 | test_input_validation | Negative and validation tests |
 | test_stress_ml_kem | Large-scale stress and reliability testing |
 | test_invalid_ciphertexts | Invalid ciphertext and fallback-path validation |
 
-## 1. KAT End-to-End Decapsulation Tests
+## 1. NIST KAT Decapsulation validation
 
 Directory:
 
@@ -59,19 +59,14 @@ test_decapsulation/
 
 Purpose:
 
-Full end-to-end verification of ML-KEM using official NIST known answer test vectors for key generation.
-Verifies:
-key generation,
-encapsulation,
-decapsulation,
-shared secret agreement.
+A complete end-to-end verification of ML-KEM using official NIST test vectors (known as "Known Answer Tests") for decapsulation.
 
 The test uses:
 
-75 deterministic vector sets total:
-25 × ML-KEM-512
-25 × ML-KEM-768
-25 × ML-KEM-1024
+30 deterministic vector sets total:
+10 × ML-KEM-512
+10 × ML-KEM-768
+10 × ML-KEM-1024
 
 Validation compares the shared secret derived during decapsulation with the original shared secret produced during encapsulation.
 
