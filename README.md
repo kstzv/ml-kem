@@ -18,7 +18,7 @@ With a single slot, the implementation behaves like a conventional sequential ML
 
 **The pool is an architectural feature, not an obligation to use parallelism.**
 
-### A not on the API usage
+### A note on the API usage
 
 For more detailed instructions on using the API of this implementation, please refer to document ML_KEM_API_Usage_Guide.pdf.
 
