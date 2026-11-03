@@ -6,6 +6,12 @@ The project implements **ML-KEM-512**, **ML-KEM-768**, and **ML-KEM-1024**, incl
 
 The cryptographic core is written in C11, without depending on an external cryptographic library. Environment-specific integration is provided for Linux userspace, the Linux kernel, and FreeRTOS.
 
+> **Important — Bug Reports and Feedback**
+>
+> If you discover any bugs, security issues, portability problems, or other defects in this implementation, its platform ports, or documentation, please report them to the author.
+>
+> Your feedback is greatly appreciated and helps improve the reliability, security, and portability of this project. Thank you!
+
 ### A note on the decapsulation pool
 
 **The decapsulation pool is created automatically as part of the main key context.** No separate pool initialization is required.
